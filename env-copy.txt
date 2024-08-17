@@ -1,0 +1,14 @@
+POSTGRES_USER=your username
+POSTGRES_PASSWORD=your password
+POSTGRES_DB=name of database
+POSTGRES_PORT=5432
+POSTGRES_HOST=localhost
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
+JWT_SECRET=zjP9h6ZI5LoSKCRjRTYY9841zxssx412sdf5ef41vrt71AZZcS4521
+# See https://www.prisma.io/docs/concepts/database-connectors/postgresql
+# Host value is the default container name for postgres - @nest-postgres:5432
+# change it when changing the container name
+# DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@nest-postgres:5432/${POSTGRES_DB}?schema=public
+# To have acccess to the database container from your local machine 
+# use the DATABASE_URL below which replaces nest-postgres (container name) with localhost
+#DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?schema=public
