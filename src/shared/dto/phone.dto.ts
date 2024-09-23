@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class PhoneDto {
-  @ApiProperty()
-  @IsString()
+  @IsNumber()
   @IsOptional()
+  @ApiProperty()
   id?: number;
 
   @IsString()
-  @MaxLength(100)
+  @MaxLength(20)
   @ApiProperty()
   phone: string;
 

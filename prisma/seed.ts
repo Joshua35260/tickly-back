@@ -1,16 +1,41 @@
 import { PrismaClient } from '@prisma/client';
 import { seedUser } from './seed/seed.user';
+import { seedAddress } from './seed/seed-address';
+import { seedStructure } from './seed/seed-structure';
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
 
 async function main() {
   try {
+    const existingAddressesCount = await prisma.address.count();
     const existingUsersCount = await prisma.user.count();
-
-    if (existingUsersCount >= 2000) {
+    const existingStructuresCount = await prisma.structure.count();
+    if (existingAddressesCount >= 4000) {
       console.log(
-        "La base de données contient déjà 20 utilisateurs ou plus. Le seed n'est pas nécessaire pour les utilisateurs.",
+        "La base de données contient déjà plus de 4000 adresses. Le seed n'est pas établi pour les adresses.",
+      );
+    } else {
+      await prisma.address.createMany({
+        data: await seedAddress(prisma),
+      });
+      console.log('Seed des adresses terminé.');
+    }
+
+    if (existingStructuresCount >= 1000) {
+      console.log(
+        "La base de données contient déjà plus de 1000 structures. Le seed n'est pas établi pour les structures.",
+      );
+    } else {
+      await prisma.structure.createMany({
+        data: await seedStructure(prisma),
+      });
+      console.log('Seed des structures terminé.');
+    }
+
+    if (existingUsersCount >= 4000) {
+      console.log(
+        "La base de données contient déjà 2000 utilisateurs ou plus. Le seed n'est pas nécessaire pour les utilisateurs.",
       );
     } else {
       await seedUser(prisma);

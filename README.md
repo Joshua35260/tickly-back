@@ -1,7 +1,7 @@
-# Likorn-nestJs
+# Tickly-nestJs
 
-<h1>Back Alayde sous NestJs, Prisma, PostgreSQL et Swagger.</h1>
-<p>
+<h1>Back Tickly sous NestJs, Prisma, PostgreSQL et Swagger.</h1>
+<p>Voici quelques commandes Prisma que vous pourriez trouver utiles :</p> <ul> <li><strong>Réinitialiser la base de données :</strong> <code>npx prisma migrate reset</code> <p>Cette commande supprime toutes les tables et les données, puis recrée la base de données à partir du schéma Prisma. Elle exécutera également les seeds si configurés.</p> </li> <li><strong>Générer le client Prisma :</strong> <code>npx prisma generate</code> <p>Génère le client Prisma basé sur votre schéma Prisma. Cela doit être fait chaque fois que vous modifiez le schéma.</p> </li> <li><strong>Exécuter les migrations :</strong> <code>npx prisma migrate dev</code> <p>Cette commande exécute les migrations non appliquées et met à jour la base de données en conséquence. Utilisez cette commande pendant le développement.</p> </li> <li><strong>Vérifier le statut des migrations :</strong> <code>npx prisma migrate status</code> <p>Affiche le statut actuel des migrations dans votre projet.</p> </li> <li><strong>Générer les migrations :</strong> <code>npx prisma migrate create --name <nom_de_la_migration></code> <p>Crée une nouvelle migration avec le nom spécifié.</p> </li> <li><strong>Exécuter le script de seed :</strong> <code>npx ts-node prisma/seed.ts</code> <p>Exécute le script de seed pour peupler votre base de données avec des données de test.</p> </li> </ul>
   N'oubliez pas de créer le fichier .env en prenant comme modèle le env-copy.txt à la racine.
 </p>
 <p>La bdd tourne sur docker, il faut donc avoir docker desktop de lancer par exemple, et lancer docker compose up, puis lancer npm start pour lancer l'api en local, sinon l'api ne pourra communiquer avec la bdd</p>
@@ -99,4 +99,5 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
-# alayde-back
+
+# tickly-back

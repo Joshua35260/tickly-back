@@ -1,5 +1,6 @@
 import { Email, Phone, Role, User } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { RoleType } from 'src/shared/enum/role.enum';
 
 export class UserEntity implements User {
   @ApiProperty()
@@ -17,7 +18,7 @@ export class UserEntity implements User {
   @ApiProperty()
   lastname: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, enum: RoleType, isArray: true })
   roles: Role[];
 
   @ApiProperty({ required: false, nullable: true })

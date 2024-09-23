@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class EmailDto {
-  @ApiProperty()
-  @IsString()
+  @IsNumber()
   @IsOptional()
+  @ApiProperty()
   id?: number;
 
   @IsString()

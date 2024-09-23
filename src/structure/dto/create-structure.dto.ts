@@ -1,18 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsArray,
-  IsEmail,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
   IsString,
+  IsNotEmpty,
   MaxLength,
-  MinLength,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  IsEmail,
 } from 'class-validator';
 import { EmailDto } from 'src/shared/dto/email.dto';
 import { PhoneDto } from 'src/shared/dto/phone.dto';
 
-export class CreateUserDto {
+export class CreateStructureDto {
   @IsNumber()
   @IsOptional()
   @ApiProperty({ required: false })
@@ -20,37 +19,21 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(50)
-  @ApiProperty()
-  firstname: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
-  @ApiProperty()
-  lastname: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsEmail()
   @MaxLength(100)
   @ApiProperty()
-  login: string;
+  name: string;
 
   @IsString()
-  @IsNotEmpty()
-  @MinLength(4)
-  @ApiProperty()
-  password: string;
-
-  @IsArray()
+  @MaxLength(50)
   @IsOptional()
-  @ApiProperty({
-    type: [PhoneDto],
-    required: false,
-    nullable: true,
-  })
-  phones: PhoneDto[];
+  @ApiProperty({ required: false, nullable: true })
+  type?: string;
+
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  @ApiProperty({ required: false, nullable: true })
+  service?: string;
 
   @IsArray()
   @IsOptional()
@@ -61,4 +44,13 @@ export class CreateUserDto {
     nullable: true,
   })
   emails: EmailDto[];
+
+  @IsArray()
+  @IsOptional()
+  @ApiProperty({
+    type: [PhoneDto],
+    required: false,
+    nullable: true,
+  })
+  phones: PhoneDto[];
 }

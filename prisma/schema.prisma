@@ -15,34 +15,61 @@ datasource db {
 }
 
 model User {
-  id        Int     @id @default(autoincrement())
-  firstname String  @db.VarChar(50)
-  lastname  String  @db.VarChar(50)
-  login     String  @unique @db.VarChar(100)
-  password  String  @db.VarChar(100)
-  roles     Role[]  @relation("UserRoles") //many to many
-  emails    Email[]
-  phones    Phone[]
+  id         Int         @id @default(autoincrement())
+  firstname  String      @db.VarChar(50)
+  lastname   String      @db.VarChar(50)
+  login      String      @unique @db.VarChar(100)
+  password   String      @db.VarChar(100)
+  roles      Role[]      @relation("UserRoles") //many to many
+  emails     Email[]     @relation("UserEmails")
+  phones     Phone[]     @relation("UserPhones")
+  addresses  Address[]   @relation("UserAddresses")
+  structures Structure[] @relation("UserStructures")
 }
 
 model Role {
-  id    Int    @id @default(autoincrement())
-  role  String @db.VarChar(50)
+  role  String @id @db.VarChar(50)
   users User[] @relation("UserRoles") //many to many
 }
 
+model Structure {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  type      String?   @db.VarChar(100)
+  service   String?   @db.VarChar(50)
+  emails    Email[]   @relation("StructureEmails") //many to many
+  phones    Phone[]   @relation("StructurePhones")
+  addresses Address[] @relation("StructureAddresses")
+  users     User[]    @relation("UserStructures")
+}
+
+model Address {
+  id          Int        @id @default(autoincrement())
+  country     String     @db.VarChar(100)
+  postcode    String     @db.VarChar(20)
+  city        String     @db.VarChar(100)
+  street_l1   String     @db.VarChar(255)
+  street_l2   String?    @db.VarChar(255)
+  longitude   Decimal?   @db.Decimal(9, 6)
+  latitude    Decimal?   @db.Decimal(9, 6)
+  userId      Int? // Optionnel pour la relation avec User
+  user        User?      @relation("UserAddresses", fields: [userId], references: [id]) // Relation optionnelle avec User
+  structureId Int? // Optionnel pour la relation avec Structure
+  structure   Structure? @relation("StructureAddresses", fields: [structureId], references: [id]) // Relation optionnelle avec Structure
+}
+
 model Email {
-  id     Int    @id @default(autoincrement())
-  email  String @db.VarChar(100)
-  type   String @db.VarChar(50)
-  userId Int // Clé étrangère vers User, one to many
-  user   User   @relation(fields: [userId], references: [id])
+  id        Int         @id @default(autoincrement())
+  email     String      @db.VarChar(100)
+  type      String      @db.VarChar(50)
+  user      User[]      @relation("UserEmails") //many to many
+  structure Structure[] @relation("StructureEmails") //many to many
 }
 
 model Phone {
-  id     Int    @id @default(autoincrement())
-  phone  String @db.VarChar(20)
-  type   String @db.VarChar(50)
-  userId Int // Clé étrangère vers User, one to many
-  user   User   @relation(fields: [userId], references: [id])
+  id        Int         @id @default(autoincrement())
+  phone     String      @db.VarChar(20)
+  type      String      @db.VarChar(50)
+  user      User[]      @relation("UserPhones") //many to many
+  structure Structure[] @relation("StructurePhones") //many to many
 }

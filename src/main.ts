@@ -1,20 +1,32 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
+import * as cookieParser from 'cookie-parser';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  app.useGlobalPipes(new ValidationPipe());
+  app.enableCors({
+    origin: 'http://localhost:4200', // Update with your Angular app URL
+    credentials: true, // Allow credentials (cookies)
+  });
+  app.setGlobalPrefix('api'); // Définir le préfixe global pour toutes les routes
+  app.use(cookieParser()); // cookie parser middleware
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true })); //whitelist true = supprime les champs non renseignés
 
   const config = new DocumentBuilder()
-    .setTitle('Median')
-    .setDescription('The Median API description')
+    .setTitle('Tickly API')
+    .setDescription('The Tickly API description')
     .setVersion('0.1')
+    .addCookieAuth('Tickly') // Utilisez le nom du cookie approprié ici
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter)); // use prisma client exception filter globally for all controllers
 
   await app.listen(3000);
 }
