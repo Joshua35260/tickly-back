@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { PaginationDto } from 'src/shared/dto/pagination.dto';
 
 @Controller('user')
 @ApiTags('user')
@@ -36,8 +38,15 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity, isArray: true })
-  findAll() {
-    return this.userService.findAll();
+  findAll(
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize?: number, // Pass them to the service, With this setup, you can call the endpoint with optional query parameters like this: sql GET /user?page=2&pageSize=10
+  ) {
+    const pagination: PaginationDto = {
+      page: page || 1, // Default to 1 if not provided
+      pageSize: pageSize || 20, // Default to 20 if not provided
+    };
+    return this.userService.findAll(pagination);
   }
 
   @Get(':id')

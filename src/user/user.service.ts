@@ -5,6 +5,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { User } from '@prisma/client';
 import { RoleType } from 'src/shared/enum/role.enum';
+import { PaginationDto } from 'src/shared/dto/pagination.dto';
 
 export const roundsOfHashing = 10;
 
@@ -49,15 +50,32 @@ export class UserService {
     });
   }
 
-  async findAll(): Promise<Omit<User, 'password'>[]> {
-    return this.prisma.user.findMany({
-      omit: { password: true },
-      include: {
-        phones: true,
-        emails: true,
-        roles: true,
-      },
-    });
+  async findAll({ page = 1, pageSize = 20 }: PaginationDto): Promise<{
+    page: number;
+    pageSize: number;
+    total: number;
+    items: Omit<User, 'password'>[];
+  }> {
+    const [users, totalCount] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          phones: true,
+          emails: true,
+          roles: true,
+          addresses: true,
+        },
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    return {
+      page,
+      pageSize,
+      total: totalCount,
+      items: users,
+    };
   }
 
   async findOne(id: number): Promise<Omit<User, 'password'> | null> {
@@ -67,6 +85,7 @@ export class UserService {
         phones: true,
         emails: true,
         roles: true,
+        addresses: true,
       },
       omit: { password: true },
     });
