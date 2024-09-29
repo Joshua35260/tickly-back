@@ -35,6 +35,8 @@ async function seedUser(prisma: PrismaClient) {
     }),
   ]);
 
+  const addresses = await prisma.address.findMany();
+
   // Créez un utilisateur spécifique avec un mot de passe défini
   const hashedPassword = await bcrypt.hash('test', roundsOfHashing);
 
@@ -53,6 +55,11 @@ async function seedUser(prisma: PrismaClient) {
         create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
       },
       emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
+      addresses: {
+        connect: {
+          id: addresses[Math.floor(Math.random() * addresses.length)].id,
+        }, // Associe une adresse aléatoire
+      },
     },
   });
   users.push(user1);
@@ -79,6 +86,11 @@ async function seedUser(prisma: PrismaClient) {
           create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
         },
         emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
+        addresses: {
+          connect: {
+            id: addresses[Math.floor(Math.random() * addresses.length)].id,
+          }, // Associe une adresse aléatoire
+        },
       },
     });
 

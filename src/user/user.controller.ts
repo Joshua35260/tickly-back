@@ -18,6 +18,7 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
@@ -38,6 +39,20 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity, isArray: true })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: String,
+    description: 'Number of the page',
+    example: '1',
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: String,
+    description: 'Number of items per page',
+    example: '20',
+  })
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize?: number, // Pass them to the service, With this setup, you can call the endpoint with optional query parameters like this: sql GET /user?page=2&pageSize=10
@@ -65,7 +80,7 @@ export class UserController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(+id, updateUserDto);
+    return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')

@@ -16,8 +16,10 @@ async function main() {
         "La base de données contient déjà plus de 4000 adresses. Le seed n'est pas établi pour les adresses.",
       );
     } else {
+      const addressesToInsert = await seedAddress(prisma);
       await prisma.address.createMany({
-        data: await seedAddress(prisma),
+        data: addressesToInsert,
+        skipDuplicates: true,
       });
       console.log('Seed des adresses terminé.');
     }
@@ -29,6 +31,7 @@ async function main() {
     } else {
       await prisma.structure.createMany({
         data: await seedStructure(prisma),
+        skipDuplicates: true,
       });
       console.log('Seed des structures terminé.');
     }

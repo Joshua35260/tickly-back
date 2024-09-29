@@ -43,8 +43,8 @@ export class AuthController {
       .cookie('Tickly', authEntity.token, {
         httpOnly: true,
         secure: false,
-        sameSite: 'lax', // 'none' | 'lax' | 'strict'
-        expires: new Date(Date.now() + 1 * 24 * 60 * 1000), //1 day
+        sameSite: 'lax',
+        expires: new Date(Date.now() + 1 * 24 * 60 * 1000), //1 jour
       })
       .send(authEntity);
   }
@@ -55,10 +55,11 @@ export class AuthController {
     res.clearCookie('Tickly').send();
   }
 
-  @Get('info')
+  @Get('session')
   @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
-  async getUserInfo(@Req() request: AuthenticatedRequest): Promise<AuthEntity> {
+  @ApiOkResponse({ type: AuthEntity })
+  async authSession(@Req() request: AuthenticatedRequest): Promise<AuthEntity> {
     return this.authService.getUserInfo(request);
   }
 }

@@ -131,20 +131,18 @@ async function seedAddress(prisma: PrismaClient) {
     // Sélectionne une ville au hasard dans la liste
     const randomCity =
       frenchCities[Math.floor(Math.random() * frenchCities.length)];
-
-    const address = await prisma.address.create({
-      data: {
-        street_l1: faker.location.streetAddress(),
-        street_l2: faker.location.secondaryAddress(),
-        postcode: randomCity.postcode,
-        city: randomCity.city,
-        country: 'France',
-        latitude: randomCity.latitude,
-        longitude: randomCity.longitude,
-      },
+    addresses.push({
+      street_l1: faker.location.streetAddress(),
+      street_l2: faker.location.secondaryAddress(),
+      postcode: randomCity.postcode,
+      city: randomCity.city,
+      country: 'France',
+      latitude: randomCity.latitude,
+      longitude: randomCity.longitude,
     });
-    addresses.push(address);
   }
+
+  // Retourne les adresses générées
   return addresses;
 }
 
