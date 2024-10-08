@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 async function main() {
   try {
     const existingAddressesCount = await prisma.address.count();
-    const existingUsersCount = await prisma.user.count();
     const existingStructuresCount = await prisma.structure.count();
+    const existingUsersCount = await prisma.user.count();
     if (existingAddressesCount >= 4000) {
       console.log(
         "La base de données contient déjà plus de 4000 adresses. Le seed n'est pas établi pour les adresses.",

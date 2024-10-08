@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker';
 import { PrismaClient, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { RoleType } from '../../src/shared/enum/role.enum'; // Assurez-vous que ce chemin est correct
+import { JobType } from '../../src/shared/enum/job-type.enum';
 
 const roundsOfHashing = 10;
 
@@ -35,6 +36,19 @@ async function seedUser(prisma: PrismaClient) {
     }),
   ]);
 
+  const jobTypes = await Promise.all([
+    prisma.jobType.upsert({
+      where: { jobType: JobType.FREELANCE },
+      update: {},
+      create: { jobType: JobType.FREELANCE },
+    }),
+    prisma.jobType.upsert({
+      where: { jobType: JobType.EMPLOYEE },
+      update: {},
+      create: { jobType: JobType.EMPLOYEE },
+    }),
+  ]);
+
   const addresses = await prisma.address.findMany();
 
   // Créez un utilisateur spécifique avec un mot de passe défini
@@ -55,7 +69,12 @@ async function seedUser(prisma: PrismaClient) {
         create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
       },
       emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
-      addresses: {
+      jobType: {
+        connect: {
+          jobType: JobType.FREELANCE,
+        },
+      },
+      address: {
         connect: {
           id: addresses[Math.floor(Math.random() * addresses.length)].id,
         }, // Associe une adresse aléatoire
@@ -70,6 +89,8 @@ async function seedUser(prisma: PrismaClient) {
       faker.internet.password(),
       roundsOfHashing,
     );
+
+    const userJobType = jobTypes[Math.floor(Math.random() * jobTypes.length)];
 
     const user: User = await prisma.user.create({
       data: {
@@ -86,7 +107,12 @@ async function seedUser(prisma: PrismaClient) {
           create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
         },
         emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
-        addresses: {
+        jobType: {
+          connect: {
+            jobType: userJobType.jobType, // Assurez-vous que cela correspond à la structure attendue
+          },
+        },
+        address: {
           connect: {
             id: addresses[Math.floor(Math.random() * addresses.length)].id,
           }, // Associe une adresse aléatoire
@@ -94,8 +120,8 @@ async function seedUser(prisma: PrismaClient) {
       },
     });
 
-    // Lier aléatoirement 75% du temps
-    if (Math.random() < 0.75) {
+    // Si l'utilisateur est EMPLOYEE, on le connecte à une structure
+    if (userJobType.jobType === JobType.EMPLOYEE) {
       const structureCount = await prisma.structure.count();
       if (structureCount > 0) {
         const randomStructure = await prisma.structure.findFirst({

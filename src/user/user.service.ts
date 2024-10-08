@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { RoleType } from 'src/shared/enum/role.enum';
 import { PaginationDto } from 'src/shared/dto/pagination.dto';
 
@@ -77,9 +77,8 @@ export class UserService {
       items: users,
     };
   }
-
   async findOne(id: number): Promise<Omit<User, 'password'> | null> {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
         phones: true,
@@ -89,6 +88,12 @@ export class UserService {
       },
       omit: { password: true },
     });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
   }
 
   async update(
@@ -103,61 +108,73 @@ export class UserService {
       );
     }
 
-    const { phones = [], emails = [], roles = [], ...userData } = updateUserDto;
+    const { phones, emails, roles, ...userData } = updateUserDto;
 
-    if (roles.length === 0) {
-      throw new Error('User must have at least one role.');
-    }
+    const updateData: any = {
+      ...userData,
+    };
 
-    return await this.prisma.user.update({
-      where: { id },
-      data: {
-        ...userData,
-        phones: {
-          update: phones
-            .filter((phone) => phone.id)
-            .map((phone) => ({
-              where: { id: phone.id },
-              data: {
-                phone: phone.phone,
-                type: phone.type,
-              },
-            })),
-          create: phones
-            .filter((phone) => !phone.id)
-            .map((phone) => ({
+    // Mettre à jour les téléphones s'ils sont fournis
+    if (phones?.length > 0) {
+      updateData.phones = {
+        update: phones
+          .filter((phone) => phone.id) // Update only if the phone has an ID
+          .map((phone) => ({
+            where: { id: phone.id },
+            data: {
               phone: phone.phone,
               type: phone.type,
-            })),
-        },
-        emails: {
-          update: emails
-            .filter((email) => email.id)
-            .map((email) => ({
-              where: { id: email.id },
-              data: {
-                email: email.email,
-                type: email.type,
-              },
-            })),
-          create: emails
-            .filter((email) => !email.id)
-            .map((email) => ({
+            },
+          })),
+        create: phones
+          .filter((phone) => !phone.id) // Create new phone if it has no ID
+          .map((phone) => ({
+            phone: phone.phone,
+            type: phone.type,
+          })),
+      };
+    }
+
+    // Mettre à jour les e-mails s'ils sont fournis
+    if (emails?.length > 0) {
+      updateData.emails = {
+        update: emails
+          .filter((email) => email.id) // Update only if the email has an ID
+          .map((email) => ({
+            where: { id: email.id },
+            data: {
               email: email.email,
               type: email.type,
-            })),
-        },
-        roles: {
-          set: roles.map((role) => ({ role })),
-          connectOrCreate: roles.map((role) => ({
-            where: { role },
-            create: { role },
+            },
           })),
-        },
-      },
+        create: emails
+          .filter((email) => !email.id) // Create new email if it has no ID
+          .map((email) => ({
+            email: email.email,
+            type: email.type,
+          })),
+      };
+    }
+
+    // Ne mettre à jour les rôles que s'ils sont fournis
+    if (roles?.length > 0) {
+      updateData.roles = {
+        set: roles.map((role) => ({ role })),
+        connectOrCreate: roles.map((role) => ({
+          where: { role },
+          create: { role },
+        })),
+      };
+    }
+
+    // Exécuter la mise à jour de l'utilisateur
+    return await this.prisma.user.update({
+      where: { id },
+      data: updateData,
       include: {
         phones: true,
         emails: true,
+        roles: true,
       },
       omit: { password: true },
     });

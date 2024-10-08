@@ -77,7 +77,7 @@ async function seedStructure(prisma: PrismaClient) {
             },
           ],
         },
-        addresses: { connect: { id: randomAddress.id } },
+        address: { connect: { id: randomAddress.id } },
       },
     });
 
