@@ -23,11 +23,21 @@ export class UserService {
         roundsOfHashing,
       );
     }
+
     const defaultRole = RoleType.CLIENT;
+
+    // Prepare jobType connection (connect to an existing JobType)
+    const jobTypeInput = {
+      connect: { jobType: createUserDto.jobType }, // Connect using 'jobType' field as it's the primary key
+    };
+
     // Attempt to create user
     return await this.prisma.user.create({
       data: {
-        ...createUserDto,
+        firstname: createUserDto.firstname,
+        lastname: createUserDto.lastname,
+        login: createUserDto.login,
+        password: createUserDto.password,
         phones: {
           create: createUserDto.phones || [],
         },
@@ -40,13 +50,27 @@ export class UserService {
             create: { role: defaultRole },
           },
         },
+        address: {
+          // Directly create address without nesting
+          create: {
+            country: createUserDto.address.country,
+            city: createUserDto.address.city,
+            street_l1: createUserDto.address.street_l1,
+            street_l2: createUserDto.address.street_l2, // Make sure to adjust based on your AddressDto
+            postcode: createUserDto.address.postcode,
+            latitude: createUserDto.address.latitude,
+            longitude: createUserDto.address.longitude,
+          },
+        },
+        jobType: jobTypeInput, // Connect to the existing JobType
       },
       include: {
         phones: true,
         emails: true,
         roles: true,
+        address: true,
+        jobType: true,
       },
-      omit: { password: true },
     });
   }
 
@@ -64,7 +88,7 @@ export class UserService {
           phones: true,
           emails: true,
           roles: true,
-          addresses: true,
+          address: true,
         },
       }),
       this.prisma.user.count(),
@@ -84,7 +108,7 @@ export class UserService {
         phones: true,
         emails: true,
         roles: true,
-        addresses: true,
+        address: true,
       },
       omit: { password: true },
     });

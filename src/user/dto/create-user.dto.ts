@@ -11,6 +11,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { AddressDto } from 'src/address/dto/address.dto';
 import { EmailDto } from 'src/shared/dto/email.dto';
 import { PhoneDto } from 'src/shared/dto/phone.dto';
 import { JobType } from 'src/shared/enum/job-type.enum';
@@ -57,7 +58,7 @@ export class CreateUserDto {
   phones: PhoneDto[];
 
   @ApiProperty({ nullable: false })
-  address: Address;
+  address: AddressDto;
 
   @IsArray()
   @IsOptional()

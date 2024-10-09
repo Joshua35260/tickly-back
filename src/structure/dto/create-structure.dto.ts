@@ -6,8 +6,8 @@ import {
   IsOptional,
   IsArray,
   IsNumber,
-  IsEmail,
 } from 'class-validator';
+import { AddressDto } from 'src/address/dto/address.dto';
 import { EmailDto } from 'src/shared/dto/email.dto';
 import { PhoneDto } from 'src/shared/dto/phone.dto';
 
@@ -37,7 +37,6 @@ export class CreateStructureDto {
 
   @IsArray()
   @IsOptional()
-  @IsEmail()
   @ApiProperty({
     type: [EmailDto],
     required: false,
@@ -53,4 +52,7 @@ export class CreateStructureDto {
     nullable: true,
   })
   phones: PhoneDto[];
+
+  @ApiProperty({ nullable: false })
+  address: AddressDto;
 }

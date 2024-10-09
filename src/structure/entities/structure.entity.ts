@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Email, Phone, Structure } from '@prisma/client';
+import { Address, Email, Phone, Structure } from '@prisma/client';
 export class StructureEntity implements Structure {
   @ApiProperty()
   id: number;
@@ -18,4 +18,10 @@ export class StructureEntity implements Structure {
 
   @ApiProperty({ required: false, nullable: true })
   phones: Phone[];
+
+  @ApiProperty({ required: true, nullable: false })
+  addressId: number;
+
+  @ApiProperty({ required: true, nullable: false })
+  address: Address;
 }
