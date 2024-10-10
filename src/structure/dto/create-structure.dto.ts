@@ -1,22 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Address } from '@prisma/client';
 import {
   IsString,
   IsNotEmpty,
   MaxLength,
   IsOptional,
   IsArray,
-  IsNumber,
 } from 'class-validator';
-import { AddressDto } from 'src/address/dto/address.dto';
 import { EmailDto } from 'src/shared/dto/email.dto';
 import { PhoneDto } from 'src/shared/dto/phone.dto';
 
 export class CreateStructureDto {
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ required: false })
-  id?: number;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -54,5 +48,5 @@ export class CreateStructureDto {
   phones: PhoneDto[];
 
   @ApiProperty({ nullable: false })
-  address: AddressDto;
+  address: Address;
 }

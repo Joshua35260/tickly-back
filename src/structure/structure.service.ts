@@ -3,17 +3,15 @@ import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import { Structure } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+import { PaginationDto } from 'src/shared/dto/pagination.dto';
 
 @Injectable()
 export class StructureService {
   constructor(private prisma: PrismaService) {}
   async create(createStructureDto: CreateStructureDto): Promise<Structure> {
-    // Destructure the createStructureDto and exclude the id field
-    const { id, ...structureData } = createStructureDto;
-
     return await this.prisma.structure.create({
       data: {
-        ...structureData, // This will now exclude the id field
+        ...createStructureDto, // This will now exclude the id field
         emails: {
           create: createStructureDto.emails || [], // Create emails
         },
@@ -36,17 +34,34 @@ export class StructureService {
       include: {
         emails: true,
         phones: true,
+        address: true,
       },
     });
   }
 
-  async findAll(): Promise<Structure[]> {
-    return await this.prisma.structure.findMany({
-      include: {
-        emails: true,
-        phones: true,
-      },
-    });
+  async findAll({ page = 1, pageSize = 20 }: PaginationDto): Promise<{
+    page: number;
+    pageSize: number;
+    total: number;
+    items: Structure[];
+  }> {
+    const [structures, totalCount] = await this.prisma.$transaction([
+      this.prisma.structure.findMany({
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          address: true,
+        },
+      }),
+      this.prisma.structure.count(),
+    ]);
+
+    return {
+      page,
+      pageSize,
+      total: totalCount,
+      items: structures,
+    };
   }
 
   async findOne(id: number): Promise<Structure | null> {
@@ -55,6 +70,7 @@ export class StructureService {
       include: {
         emails: true,
         phones: true,
+        address: true,
       },
     });
   }

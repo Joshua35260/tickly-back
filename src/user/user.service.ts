@@ -3,7 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { Prisma, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { RoleType } from 'src/shared/enum/role.enum';
 import { PaginationDto } from 'src/shared/dto/pagination.dto';
 
@@ -13,9 +13,7 @@ export const roundsOfHashing = 10;
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(
-    createUserDto: CreateUserDto,
-  ): Promise<Omit<User, 'password'> | null> {
+  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
     // Hash password if provided
     if (createUserDto.password) {
       createUserDto.password = await bcrypt.hash(

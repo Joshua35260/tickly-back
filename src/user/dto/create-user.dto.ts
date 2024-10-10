@@ -5,24 +5,17 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { AddressDto } from 'src/address/dto/address.dto';
 import { EmailDto } from 'src/shared/dto/email.dto';
 import { PhoneDto } from 'src/shared/dto/phone.dto';
 import { JobType } from 'src/shared/enum/job-type.enum';
 import { RoleType } from 'src/shared/enum/role.enum';
 
 export class CreateUserDto {
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ required: false, nullable: false })
-  id?: number;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
@@ -58,7 +51,7 @@ export class CreateUserDto {
   phones: PhoneDto[];
 
   @ApiProperty({ nullable: false })
-  address: AddressDto;
+  address: Address;
 
   @IsArray()
   @IsOptional()

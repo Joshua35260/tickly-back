@@ -9,38 +9,44 @@ import {
   ParseIntPipe,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
-import { StructureService } from './structure.service';
-import { CreateStructureDto } from './dto/create-structure.dto';
-import { UpdateStructureDto } from './dto/update-structure.dto';
 import {
-  ApiBearerAuth,
+  ApiTags,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiCookieAuth,
+  ApiBearerAuth,
   ApiQuery,
-  ApiTags,
 } from '@nestjs/swagger';
-import { StructureEntity } from './entities/structure.entity';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
 import { PaginationDto } from 'src/shared/dto/pagination.dto';
+import { TicketService } from './ticket.service';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { AuthenticatedRequest } from 'src/auth/auth.service';
+import { TicketEntity } from './entities/ticket.entity';
 
-@Controller('structure')
-@ApiTags('structure')
-export class StructureController {
-  constructor(private readonly structureService: StructureService) {}
+@Controller('ticket')
+@ApiTags('ticket')
+export class TicketController {
+  constructor(private readonly ticketService: TicketService) {}
 
   @Post()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiCreatedResponse({ type: StructureEntity })
-  create(@Body() createStructureDto: CreateStructureDto) {
-    return this.structureService.create(createStructureDto);
+  @ApiCreatedResponse({ type: TicketEntity })
+  async create(
+    @Body() createTicketDto: CreateTicketDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return await this.ticketService.create(createTicketDto, request);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: StructureEntity, isArray: true })
+  @ApiOkResponse({ type: TicketEntity, isArray: true })
   @ApiQuery({
     name: 'page',
     required: false,
@@ -63,33 +69,33 @@ export class StructureController {
       page: page || 1, // Default to 1 if not provided
       pageSize: pageSize || 20, // Default to 20 if not provided
     };
-    return this.structureService.findAll(pagination);
+    return this.ticketService.findAll(pagination);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: StructureEntity })
+  @ApiOkResponse({ type: TicketEntity })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.structureService.findOne(+id);
+    return this.ticketService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: StructureEntity })
+  @ApiOkResponse({ type: TicketEntity })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateStructureDto: UpdateStructureDto,
+    @Body() updateUserDto: UpdateTicketDto,
   ) {
-    return this.structureService.update(+id, updateStructureDto);
+    return this.ticketService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: StructureEntity })
+  @ApiOkResponse({ type: TicketEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return this.structureService.remove(+id);
+    return this.ticketService.remove(id);
   }
 }

@@ -30,7 +30,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @ApiCreatedResponse({ type: CreateUserDto })
+  @ApiCreatedResponse({ type: UserEntity })
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
@@ -88,6 +88,6 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.remove(+id);
+    return this.userService.remove(id);
   }
 }

@@ -7,5 +7,6 @@ import { PrismaModule } from 'prisma/prisma.module';
   controllers: [StructureController],
   providers: [StructureService],
   imports: [PrismaModule],
+  exports: [StructureService],
 })
 export class StructureModule {}
