@@ -9,6 +9,7 @@ import { TicketModule } from './ticket/ticket.module';
 import { CategoryModule } from './category/category.module';
 import { PriorityModule } from './priority/priority.module';
 import { StatusModule } from './status/status.module';
+import { AddressModule } from './address/address.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { StatusModule } from './status/status.module';
     CategoryModule,
     PriorityModule,
     StatusModule,
+    AddressModule,
   ],
   controllers: [AppController],
   providers: [AppService],

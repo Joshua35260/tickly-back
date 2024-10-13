@@ -15,26 +15,16 @@ export class StatusService {
       data: {
         ...createStatusDto,
       },
-      include: {
-        ticket: true,
-      },
     });
   }
 
   async findAll(): Promise<Status[]> {
-    return await this.prisma.status.findMany({
-      include: {
-        ticket: true,
-      },
-    });
+    return await this.prisma.status.findMany({});
   }
 
   async findOne(id: number): Promise<Status | null> {
     return await this.prisma.status.findUnique({
       where: { id },
-      include: {
-        ticket: true,
-      },
     });
   }
 
@@ -46,9 +36,6 @@ export class StatusService {
     return await this.prisma.status.update({
       where: { id },
       data: updateStatusDto,
-      include: {
-        ticket: true,
-      },
     });
   }
 

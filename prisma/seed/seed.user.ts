@@ -14,9 +14,14 @@ function generateFrenchPhoneNumber(): string {
 
 async function generateUniqueEmail(prisma: PrismaClient): Promise<string> {
   let email;
-  do {
+  let exists = true;
+
+  while (exists) {
     email = faker.internet.email(); // Générer un nouvel e-mail
-  } while (await prisma.user.findUnique({ where: { login: email } })); // Vérifier l'unicité
+    exists =
+      (await prisma.user.findUnique({ where: { login: email } })) !== null; // Vérifier l'unicité
+  }
+
   return email;
 }
 
@@ -46,6 +51,11 @@ async function seedUser(prisma: PrismaClient) {
       where: { jobType: JobType.EMPLOYEE },
       update: {},
       create: { jobType: JobType.EMPLOYEE },
+    }),
+    prisma.jobType.upsert({
+      where: { jobType: JobType.CONSUMER },
+      update: {},
+      create: { jobType: JobType.CONSUMER },
     }),
   ]);
 
@@ -83,8 +93,8 @@ async function seedUser(prisma: PrismaClient) {
   });
   users.push(user1);
 
-  // Créez 2000 utilisateurs
-  for (let i = 0; i < 2000; i++) {
+  // Créez 6000 utilisateurs
+  for (let i = 0; i < 6000; i++) {
     const hashedPassword = await bcrypt.hash(
       faker.internet.password(),
       roundsOfHashing,

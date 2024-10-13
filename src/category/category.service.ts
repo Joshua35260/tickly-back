@@ -7,7 +7,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     // Destructure the createStructureDto and exclude the id field
 
@@ -15,26 +15,16 @@ export class CategoryService {
       data: {
         ...createCategoryDto,
       },
-      include: {
-        ticket: true,
-      },
     });
   }
 
   async findAll(): Promise<Category[]> {
-    return await this.prisma.category.findMany({
-      include: {
-        ticket: true,
-      },
-    });
+    return await this.prisma.category.findMany({});
   }
 
   async findOne(id: number): Promise<Category | null> {
     return await this.prisma.category.findUnique({
       where: { id },
-      include: {
-        ticket: true,
-      },
     });
   }
 
@@ -46,9 +36,6 @@ export class CategoryService {
     return await this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,
-      include: {
-        ticket: true,
-      },
     });
   }
 

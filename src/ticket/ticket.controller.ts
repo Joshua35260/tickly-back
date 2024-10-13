@@ -10,6 +10,7 @@ import {
   UseGuards,
   Query,
   Req,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,15 +18,16 @@ import {
   ApiOkResponse,
   ApiCookieAuth,
   ApiBearerAuth,
-  ApiQuery,
+  ApiExtraModels,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/auth.guard';
-import { PaginationDto } from 'src/shared/dto/pagination.dto';
+import { JwtAuthGuard } from '../../src/auth/auth.guard';
+import { PaginationDto } from '../../src/shared/dto/pagination.dto';
 import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { AuthenticatedRequest } from 'src/auth/auth.service';
+import { AuthenticatedRequest } from '../../src/auth/auth.service';
 import { TicketEntity } from './entities/ticket.entity';
+import { FilterTicketDto } from './dto/filter-ticket.dto';
 
 @Controller('ticket')
 @ApiTags('ticket')
@@ -47,37 +49,24 @@ export class TicketController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity, isArray: true })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: String,
-    description: 'Number of the page',
-    example: '1',
-  })
-  @ApiQuery({
-    name: 'pageSize',
-    required: false,
-    type: String,
-    description: 'Number of items per page',
-    example: '20',
-  })
+  @ApiExtraModels(PaginationDto, FilterTicketDto) // Indiquer à Swagger d'utiliser ce DTO
   findAll(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize?: number, // Pass them to the service, With this setup, you can call the endpoint with optional query parameters like this: sql GET /user?page=2&pageSize=10
+    @Query() pagination: PaginationDto,
+    @Query() filters?: FilterTicketDto,
   ) {
-    const pagination: PaginationDto = {
-      page: page || 1, // Default to 1 if not provided
-      pageSize: pageSize || 20, // Default to 20 if not provided
-    };
-    return this.ticketService.findAll(pagination);
+    return this.ticketService.findAll(pagination, filters);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ticketService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const ticket = await this.ticketService.findOne(id);
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+    return ticket;
   }
 
   @Patch(':id')
@@ -87,8 +76,9 @@ export class TicketController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateTicketDto,
+    @Req() request: AuthenticatedRequest,
   ) {
-    return this.ticketService.update(id, updateUserDto);
+    return this.ticketService.update(id, updateUserDto, request);
   }
 
   @Delete(':id')

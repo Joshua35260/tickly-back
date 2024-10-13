@@ -132,8 +132,8 @@ async function seedAddress(prisma: PrismaClient) {
     const randomCity =
       frenchCities[Math.floor(Math.random() * frenchCities.length)];
     addresses.push({
-      street_l1: faker.location.streetAddress(),
-      street_l2: faker.location.secondaryAddress(),
+      streetL1: faker.location.streetAddress(),
+      streetL2: faker.location.secondaryAddress(),
       postcode: randomCity.postcode,
       city: randomCity.city,
       country: 'France',

@@ -1,4 +1,5 @@
 export enum JobType {
   EMPLOYEE = 'EMPLOYEE',
   FREELANCE = 'FREELANCE',
+  CONSUMER = 'INDIVIDUAL',
 }

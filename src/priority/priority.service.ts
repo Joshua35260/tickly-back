@@ -7,7 +7,7 @@ import { UpdatePriorityDto } from './dto/update-priority.dto';
 
 @Injectable()
 export class PriorityService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
   async create(createPriorityDto: CreatePriorityDto): Promise<Priority> {
     // Destructure the createStructureDto and exclude the id field
 
@@ -15,26 +15,16 @@ export class PriorityService {
       data: {
         ...createPriorityDto,
       },
-      include: {
-        ticket: true,
-      },
     });
   }
 
   async findAll(): Promise<Priority[]> {
-    return await this.prisma.priority.findMany({
-      include: {
-        ticket: true,
-      },
-    });
+    return await this.prisma.priority.findMany({});
   }
 
   async findOne(id: number): Promise<Priority | null> {
     return await this.prisma.priority.findUnique({
       where: { id },
-      include: {
-        ticket: true,
-      },
     });
   }
 
@@ -46,9 +36,6 @@ export class PriorityService {
     return await this.prisma.priority.update({
       where: { id },
       data: updatePriorityDto,
-      include: {
-        ticket: true,
-      },
     });
   }
 

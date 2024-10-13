@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
-import { RoleType } from 'src/shared/enum/role.enum';
-import { PaginationDto } from 'src/shared/dto/pagination.dto';
+import { Prisma, User } from '@prisma/client';
+import { RoleType } from '../../src/shared/enum/role.enum';
+import { PaginationDto } from '../../src/shared/dto/pagination.dto';
+import { JobType } from '../../src/shared/enum/job-type.enum';
+import { FilterUserDto } from './dto/filter-user.dto';
 
 export const roundsOfHashing = 10;
 
@@ -24,10 +30,48 @@ export class UserService {
 
     const defaultRole = RoleType.CLIENT;
 
-    // Prepare jobType connection (connect to an existing JobType)
+    // Prepare jobType connection
     const jobTypeInput = {
-      connect: { jobType: createUserDto.jobType }, // Connect using 'jobType' field as it's the primary key
+      connect: { jobType: createUserDto.jobType },
     };
+
+    let addressInput; // Déclare la variable ici
+
+    // Check if the user is an employee
+    if (createUserDto.jobType !== JobType.EMPLOYEE) {
+      // non employee must have an address
+      if (!createUserDto.address) {
+        throw new BadRequestException('Freelancers must have an address.');
+      }
+
+      // Check if the address already exists
+      if (createUserDto.address.id) {
+        // If an address ID is provided, connect to the existing address
+        addressInput = {
+          connect: { id: createUserDto.address.id },
+        };
+      } else {
+        // Otherwise, create a new address
+        addressInput = {
+          create: {
+            country: createUserDto.address.country,
+            city: createUserDto.address.city,
+            streetL1: createUserDto.address.streetL1,
+            streetL2: createUserDto.address.streetL2,
+            postcode: createUserDto.address.postcode,
+            latitude: createUserDto.address.latitude,
+            longitude: createUserDto.address.longitude,
+          },
+        };
+      }
+    } else {
+      // Non-freelancers must have at least one structure ID
+      if (!createUserDto.structures || createUserDto.structures.length === 0) {
+        throw new BadRequestException(
+          'Non-freelance users must be associated with at least one structure.',
+        );
+      }
+    }
 
     // Attempt to create user
     return await this.prisma.user.create({
@@ -48,19 +92,14 @@ export class UserService {
             create: { role: defaultRole },
           },
         },
-        address: {
-          // Directly create address without nesting
-          create: {
-            country: createUserDto.address.country,
-            city: createUserDto.address.city,
-            street_l1: createUserDto.address.street_l1,
-            street_l2: createUserDto.address.street_l2, // Make sure to adjust based on your AddressDto
-            postcode: createUserDto.address.postcode,
-            latitude: createUserDto.address.latitude,
-            longitude: createUserDto.address.longitude,
-          },
-        },
-        jobType: jobTypeInput, // Connect to the existing JobType
+        // Add address input (either connect or create)
+        address: addressInput,
+        jobType: jobTypeInput,
+        structures: createUserDto.structures
+          ? {
+              connect: createUserDto.structures.map((id) => ({ id })), // Connect existing structures by ID
+            }
+          : undefined,
       },
       include: {
         phones: true,
@@ -68,18 +107,65 @@ export class UserService {
         roles: true,
         address: true,
         jobType: true,
+        structures: true,
       },
     });
   }
 
-  async findAll({ page = 1, pageSize = 20 }: PaginationDto): Promise<{
+  async findAll(
+    pagination: PaginationDto,
+    filters?: FilterUserDto,
+  ): Promise<{
     page: number;
     pageSize: number;
     total: number;
     items: Omit<User, 'password'>[];
   }> {
+    const { page, pageSize } = pagination;
+
+    // Construire directement le "where" Prisma à partir des filtres venant des query params
+    const where: Prisma.UserWhereInput = {
+      id: filters?.id ? Number(filters.id) : undefined,
+      firstname: filters?.firstname
+        ? { contains: filters.firstname, mode: 'insensitive' } // Recherche partielle insensible à la casse
+        : undefined,
+      lastname: filters?.lastname
+        ? { contains: filters.lastname, mode: 'insensitive' }
+        : undefined,
+      jobType: filters?.jobType
+        ? { is: { jobType: filters.jobType } } // is pour comparer directement la chaîne
+        : undefined,
+      roles: filters?.roles
+        ? { some: { role: { equals: filters.roles, mode: 'insensitive' } } } // Vérifie si l'utilisateur a l'un des rôles spécifiés
+        : undefined,
+      emails: filters?.emails
+        ? {
+            some: {
+              email: { equals: filters.emails }, // Compare directement la chaîne
+            },
+          }
+        : undefined,
+      phones: filters?.phones
+        ? {
+            some: {
+              phone: { equals: filters.phones }, // Compare directement la chaîne
+            },
+          }
+        : undefined,
+      address: filters?.address
+        ? { streetL1: { contains: filters.address, mode: 'insensitive' } }
+        : undefined,
+      structures: filters?.structures
+        ? {
+            some: { name: { equals: filters.structures, mode: 'insensitive' } },
+          }
+        : undefined,
+    };
+
+    // Récupération des utilisateurs avec pagination et filtres
     const [users, totalCount] = await this.prisma.$transaction([
       this.prisma.user.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
@@ -87,18 +173,23 @@ export class UserService {
           emails: true,
           roles: true,
           address: true,
+          structures: true,
         },
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
       page,
       pageSize,
       total: totalCount,
-      items: users,
+      items: users.map((user) => ({
+        ...user,
+        password: undefined, // On omet le mot de passe
+      })),
     };
   }
+
   async findOne(id: number): Promise<Omit<User, 'password'> | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -107,6 +198,7 @@ export class UserService {
         emails: true,
         roles: true,
         address: true,
+        structures: true,
       },
       omit: { password: true },
     });
@@ -117,7 +209,7 @@ export class UserService {
 
     return user;
   }
-
+  // omit: { password: true },
   async update(
     id: number,
     updateUserDto: UpdateUserDto,

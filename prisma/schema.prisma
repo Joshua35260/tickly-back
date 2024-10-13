@@ -14,22 +14,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id         Int         @id @default(autoincrement())
-  firstname  String      @db.VarChar(50)
-  lastname   String      @db.VarChar(50)
-  login      String      @unique @db.VarChar(100)
-  password   String      @db.VarChar(100)
-  roles      Role[]      @relation("UserRoles") // 0,n
-  emails     Email[]     @relation("UserEmails") // 0,n
-  phones     Phone[]     @relation("UserPhones") // 0,n
-  structures Structure[] @relation("UserStructures") //0,n
-  addressId  Int // 1,1
-  address    Address     @relation(fields: [addressId], references: [id]) // 1,1
-  jobTypeId  String  //1,1
-  jobType    JobType     @relation(fields: [jobTypeId], references: [jobType]) //1/1
-}
-
 model JobType {
   jobType String @id @db.VarChar(50)
   users   User[] //0,n
@@ -44,7 +28,7 @@ model Structure {
   id        Int     @id @default(autoincrement())
   name      String  @db.VarChar(100)
   type      String? @db.VarChar(100)
-  service   String? @db.VarChar(50)
+  service   String? @db.VarChar(100)
   emails    Email[] @relation("StructureEmails") //0,n
   phones    Phone[] @relation("StructurePhones") //0,n
   users     User[]  @relation("UserStructures") //0,n
@@ -57,26 +41,103 @@ model Address {
   country    String      @db.VarChar(100)
   postcode   String      @db.VarChar(20)
   city       String      @db.VarChar(100)
-  street_l1  String      @db.VarChar(255)
-  street_l2  String?     @db.VarChar(255)
+  streetL1   String      @db.VarChar(255)
+  streetL2   String?     @db.VarChar(255)
   longitude  Decimal?    @db.Decimal(9, 6)
   latitude   Decimal?    @db.Decimal(9, 6)
-  user       User[] //0,n
+  users      User[] //0,n
   structures Structure[] //0,n
 }
 
 model Email {
-  id        Int         @id @default(autoincrement())
-  email     String      @db.VarChar(100)
-  type      String      @db.VarChar(50)
-  user      User[]      @relation("UserEmails") //0,n
-  structure Structure[] @relation("StructureEmails") //0,n
+  id         Int         @id @default(autoincrement())
+  email      String      @db.VarChar(100)
+  type       String      @db.VarChar(50)
+  users      User[]      @relation("UserEmails") //0,n
+  structures Structure[] @relation("StructureEmails") //0,n
 }
 
 model Phone {
-  id        Int         @id @default(autoincrement())
-  phone     String      @db.VarChar(20)
-  type      String      @db.VarChar(50)
-  user      User[]      @relation("UserPhones") //0,n
-  structure Structure[] @relation("StructurePhones") //0,n
+  id         Int         @id @default(autoincrement())
+  phone      String      @db.VarChar(20)
+  type       String      @db.VarChar(50)
+  users      User[]      @relation("UserPhones") //0,n
+  structures Structure[] @relation("StructurePhones") //0,n
+}
+
+model User {
+  id              Int         @id @default(autoincrement())
+  firstname       String      @db.VarChar(50)
+  lastname        String      @db.VarChar(50)
+  login           String      @unique @db.VarChar(100)
+  password        String      @db.VarChar(100)
+  roles           Role[]      @relation("UserRoles") // 0,n
+  emails          Email[]     @relation("UserEmails") // 0,n
+  phones          Phone[]     @relation("UserPhones") // 0,n
+  structures      Structure[] @relation("UserStructures") //0,n
+  addressId       Int? //0,1
+  address         Address?    @relation(fields: [addressId], references: [id]) // 0,1
+  jobTypeId       String //1,1
+  jobType         JobType     @relation(fields: [jobTypeId], references: [jobType]) //1/1
+  AuditLog        AuditLog[] //0,n
+  ticketsAssigned Ticket[]    @relation("AssignedUsers")
+  ticketsAuthored Ticket[]    @relation("AuthorTickets")
+}
+
+model Ticket {
+  id            Int        @id @default(autoincrement())
+  description   String     @db.VarChar(2000)
+  createdAt     DateTime   @default(now()) // Date générée automatiquement à la création
+  updatedAt     DateTime   @updatedAt //Date mise à jour automatiquement lors de chaque modification, (set sur creation_date à la création du ticket)
+  archivedAt    DateTime?
+  statusId      Int //1,1
+  status        Status     @relation(fields: [statusId], references: [id]) //1,1
+  priorityId    Int //1,1
+  priority      Priority   @relation(fields: [priorityId], references: [id]) //1,1
+  category      Category[] @relation("TicketCategory") //0,n
+  assignedUsers User[]     @relation("AssignedUsers") //0,n
+  // Relation avec un seul utilisateur en tant qu'auteur du ticket
+  authorId      Int
+  author        User       @relation("AuthorTickets", fields: [authorId], references: [id]) // Un ticket a un seul auteur
+}
+
+model AuditLog {
+  id                   Int             @id @default(autoincrement())
+  userId               Int // Lien vers l'utilisateur qui a effectué l'action
+  user                 User            @relation(fields: [userId], references: [id]) //1,1
+  linkedId             Int // ID de l'entité liée (Ticket, User, etc.)
+  linkedTable          String // Nom de la table liée
+  action               String // Action effectuée (CREATE, UPDATE, DELETE)
+  modificationDate     DateTime // Date de la modification
+  fields               AuditLogValue[] // Liste des champs modifiés
+  modificationDatetime DateTime        @default(now()) // Date+Heure de modification au format ISO
+
+  @@index([linkedId, linkedTable]) // Index pour accélérer les requêtes
+}
+
+model AuditLogValue {
+  id            Int      @id @default(autoincrement())
+  auditLogId    Int // Lien vers le log d'audit
+  auditLog      AuditLog @relation(fields: [auditLogId], references: [id])
+  field         String
+  previousValue String
+  newValue      String
+}
+
+model Status {
+  id      Int      @id @default(autoincrement())
+  status  String   @db.VarChar(50)
+  tickets Ticket[] //0,n
+}
+
+model Priority {
+  id       Int      @id @default(autoincrement())
+  priority String   @db.VarChar(50)
+  tickets  Ticket[] //0,n
+}
+
+model Category {
+  id       Int      @id @default(autoincrement())
+  category String   @db.VarChar(50)
+  tickets  Ticket[] @relation("TicketCategory") //0,n
 }

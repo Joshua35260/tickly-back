@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Ticket } from '@prisma/client';
-import {
-  IsArray,
-  IsNotEmpty,
-  IsNumber,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, MaxLength } from 'class-validator';
 
 export class PriorityEntity {
   @IsNumber()
@@ -18,9 +11,4 @@ export class PriorityEntity {
   @MaxLength(50)
   @ApiProperty({ nullable: false })
   priority: string;
-
-  @IsArray()
-  @IsNotEmpty()
-  @ApiProperty()
-  ticket: Ticket[];
 }
