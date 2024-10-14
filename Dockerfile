@@ -1,35 +1,36 @@
 # Étape 1: Construction de l'image
 FROM node:22 AS builder
 
+# Définir le répertoire de travail
 WORKDIR /app
 
-# Copiez les fichiers package.json et install dependencies
+# Copier les fichiers de configuration et installer les dépendances
 COPY package*.json ./
 RUN npm install
 
-# Copiez les fichiers Prisma
-COPY prisma ./prisma/
-
-# Copiez tous les fichiers de l'application
+# Copier tous les fichiers de l'application
 COPY . .
 
-# Générer le client Prisma et construire l'application
+# Générer le client Prisma
 RUN npx prisma generate
+
+# Construire l'application
 RUN npm run build
 
 # Étape 2: Image finale
 FROM node:22
 
+# Définir le répertoire de travail
 WORKDIR /app
 
 # Copier les fichiers depuis le builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./package.json
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma ./prisma  # Copiez le dossier prisma dans l'image finale
 
-# Exposez le port pour NestJS
+# Exposer le port pour NestJS
 EXPOSE 3000
 
-# Démarrez l'application en mode production
+# Démarrer l'application en mode production
 CMD ["npm", "run", "start:prod"]
