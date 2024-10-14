@@ -26,11 +26,11 @@ WORKDIR /app
 # Copier les fichiers depuis le builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma  # Copiez le dossier Prisma dans l'image finale
+COPY --from=builder /app/dist/src ./dist/src  # Copier le contenu de dist/src
+COPY --from=builder /app/prisma ./prisma      # Copier le dossier Prisma
 
 # Exposer le port pour NestJS
 EXPOSE 3000
 
 # Démarrer l'application en mode production
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/src/main.js"]  # Démarrer le fichier main.js directement
