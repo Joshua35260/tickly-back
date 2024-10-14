@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main # ou master
+      - main  # ou master selon votre workflow
 
 jobs:
   build:
@@ -25,31 +25,33 @@ jobs:
         run: npm run build
 
       - name: Build Docker image
-        run: docker build -t your-docker-image-name .
+        run: docker build -t djosh35/tickly-back:${{ github.sha }} .
 
-      - name: Push Docker image
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Push Docker image to Docker Hub
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker tag your-docker-image-name your-dockerhub-username/your-docker-image-name:latest
-          docker push your-dockerhub-username/your-docker-image-name:latest
+          docker tag djosh35/tickly-back:${{ github.sha }} djosh35/tickly-back:latest
+          docker push djosh35/tickly-back:${{ github.sha }}
+          docker push djosh35/tickly-back:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
+      # Configuration de l'agent SSH pour gérer la clé privée
+      - name: Setup SSH for deployment
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Deploy to VPS
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          echo "$SSH_PRIVATE_KEY" > key.pem
-          chmod 600 key.pem
-          ssh -i key.pem root@92.112.192.52 << 'EOF'
-            docker pull your-dockerhub-username/your-docker-image-name:latest
-            docker stop your-container-name || true
-            docker rm your-container-name || true
-            docker run -d --name your-container-name -p 3000:3000 your-dockerhub-username/your-docker-image-name:latest
+          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+            docker pull djosh35/tickly-back:latest
+            docker stop tickly-back || true  # Remplacement de your-container-name
+            docker rm tickly-back || true    # Remplacement de your-container-name
+            docker run -d --name tickly-back -p 3000:3000 djosh35/tickly-back:latest
           EOF
