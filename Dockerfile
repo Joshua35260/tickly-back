@@ -27,7 +27,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma  # Copiez le dossier prisma dans l'image finale
+COPY --from=builder /app/prisma ./prisma  # Copiez le dossier Prisma dans l'image finale
 
 # Exposer le port pour NestJS
 EXPOSE 3000
