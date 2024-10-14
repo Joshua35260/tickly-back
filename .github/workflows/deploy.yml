@@ -41,17 +41,22 @@ jobs:
     needs: build
 
     steps:
-      # Configuration de l'agent SSH pour gérer la clé privée
-      - name: Setup SSH for deployment
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Installer sshpass pour permettre l'utilisation de mots de passe avec SSH
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
 
-      - name: Deploy to VPS
+      - name: Deploy to VPS using Docker Compose
         run: |
-          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
-            docker pull djosh35/tickly-back:latest
-            docker stop tickly-back || true  # Remplacement de your-container-name
-            docker rm tickly-back || true    # Remplacement de your-container-name
-            docker run -d --name tickly-back -p 3000:3000 djosh35/tickly-back:latest
+          # Connexion au VPS en utilisant sshpass
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
+            cd /path/to/your/docker-compose/directory
+
+            # Pull the latest image from Docker Hub
+            docker-compose pull tickly-back
+
+            # Stop and remove any existing containers
+            docker-compose down
+
+            # Start the services (NestJS backend and PostgreSQL)
+            docker-compose up -d
           EOF
