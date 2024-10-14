@@ -45,11 +45,16 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
 
+      - name: Copy project files to VPS
+        run: |
+          # Connexion au VPS et copie des fichiers
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" scp -o StrictHostKeyChecking=no -r ./* root@${{ secrets.SERVER_IP }}:/home/user/tickly-back
+
       - name: Deploy to VPS using Docker Compose
         run: |
           # Connexion au VPS en utilisant sshpass
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /path/to/your/docker-compose/directory
+            cd /home/user/tickly-back
 
             # Pull the latest image from Docker Hub
             docker-compose pull tickly-back
@@ -59,4 +64,7 @@ jobs:
 
             # Start the services (NestJS backend and PostgreSQL)
             docker-compose up -d
+            
+            # (Optionnel) Vérifiez que les conteneurs sont en cours d'exécution
+            docker-compose ps
           EOF
