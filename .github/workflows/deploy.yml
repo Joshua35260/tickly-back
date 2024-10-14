@@ -45,11 +45,19 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
 
+      - name: Ensure /root/tickly directory exists on VPS
+        run: |
+          # Connexion au VPS en utilisant sshpass
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
+            # Créer le répertoire /root/tickly s'il n'existe pas
+            mkdir -p /root/tickly
+          EOF
+
       - name: Deploy to VPS using Docker Compose
         run: |
           # Connexion au VPS en utilisant sshpass
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /home/user/tickly-back
+            cd /root/tickly/
 
             # Pull the latest image from Docker Hub
             docker-compose pull tickly-back
