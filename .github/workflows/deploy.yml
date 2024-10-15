@@ -62,7 +62,9 @@ jobs:
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
             cd /root/tickly/
-            docker-compose pull tickly-back
+            # Vous pouvez inclure un fichier .env ici si nécessaire
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env # Ajoutez cette ligne si nécessaire
+            docker-compose pull
             docker-compose down
             docker-compose up -d
             docker-compose ps
