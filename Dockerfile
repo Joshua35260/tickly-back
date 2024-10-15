@@ -32,4 +32,4 @@ COPY --from=builder /app/prisma ./prisma
 EXPOSE 3000
 
 # Démarrez l'application en mode production
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/src/main.js"]
