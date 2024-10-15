@@ -3,7 +3,7 @@ FROM node:22 AS builder
 
 WORKDIR /app
 
-# Copiez les fichiers package.json et install dependencies
+# Copiez les fichiers package.json et installez les dépendances
 COPY package*.json ./
 RUN npm install
 
@@ -22,11 +22,13 @@ FROM node:22
 
 WORKDIR /app
 
-# Copier les fichiers depuis le builder
+# Copier les fichiers nécessaires depuis le builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+
+# Copier le fichier .env dans l'image
+COPY .env ./
 
 # Exposez le port pour NestJS
 EXPOSE 3000
