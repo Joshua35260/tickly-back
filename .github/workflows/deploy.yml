@@ -25,7 +25,15 @@ jobs:
         run: npm run build
 
       - name: Build Docker image
-        run: docker build -t djosh35/tickly-back:${{ github.sha }} .
+        run: |
+          docker build \
+            --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            --build-arg POSTGRES_PORT=${{ secrets.POSTGRES_PORT }} \
+            --build-arg POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
+            --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            -t djosh35/tickly-back:${{ github.sha }} .
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -41,33 +49,21 @@ jobs:
     needs: build
 
     steps:
-      # Installer sshpass pour permettre l'utilisation de mots de passe avec SSH
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
 
       - name: Ensure /root/tickly directory exists on VPS
         run: |
-          # Connexion au VPS en utilisant sshpass
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-            # Créer le répertoire /root/tickly s'il n'existe pas
             mkdir -p /root/tickly
           EOF
 
       - name: Deploy to VPS using Docker Compose
         run: |
-          # Connexion au VPS en utilisant sshpass
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
             cd /root/tickly/
-
-            # Pull the latest image from Docker Hub
             docker-compose pull tickly-back
-
-            # Stop and remove any existing containers
             docker-compose down
-
-            # Start the services (NestJS backend and PostgreSQL)
             docker-compose up -d
-            
-            # (Optionnel) Vérifiez que les conteneurs sont en cours d'exécution
             docker-compose ps
           EOF

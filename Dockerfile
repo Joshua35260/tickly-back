@@ -27,8 +27,14 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Copier le fichier .env dans l'image
-COPY .env ./
+# Définissez les variables d'environnement
+ENV POSTGRES_USER=${POSTGRES_USER}
+ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+ENV POSTGRES_DB=${POSTGRES_DB}
+ENV POSTGRES_PORT=${POSTGRES_PORT}
+ENV POSTGRES_HOST=${POSTGRES_HOST}
+ENV DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
+ENV JWT_SECRET=${JWT_SECRET}
 
 # Exposez le port pour NestJS
 EXPOSE 3000
