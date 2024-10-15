@@ -33,6 +33,7 @@ jobs:
             --build-arg POSTGRES_PORT=${{ secrets.POSTGRES_PORT }} \
             --build-arg POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
             --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --build-arg NODE_ENV=production \
             -t djosh35/tickly-back:${{ github.sha }} .
 
       - name: Log in to Docker Hub

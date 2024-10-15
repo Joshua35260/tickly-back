@@ -7,9 +7,10 @@ import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const isProduction = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: 'http://localhost:4200', // Update with your Angular app URL
-    credentials: true, // Allow credentials (cookies)
+    origin: isProduction ? 'https://tickly.cloud' : 'http://localhost:4200',
+    credentials: true, // Autoriser les cookies
   });
   app.setGlobalPrefix('api'); // Définir le préfixe global pour toutes les routes
   app.use(cookieParser()); // cookie parser middleware
