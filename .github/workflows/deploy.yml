@@ -24,6 +24,11 @@ jobs:
       - name: Build the project
         run: npm run build
 
+      - name: List files
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -al
+
       - name: Build Docker image
         run: |
           docker build \
