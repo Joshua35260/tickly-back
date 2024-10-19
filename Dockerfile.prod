@@ -3,14 +3,14 @@ FROM node:22 AS builder
 
 WORKDIR /app
 
-# Copiez les fichiers package.json et installez les dépendances
+# Copier les fichiers package.json et installer les dépendances
 COPY package*.json ./
 RUN npm install
 
-# Copiez les fichiers Prisma
+# Copier les fichiers Prisma
 COPY prisma ./prisma/
 
-# Copiez tous les fichiers de l'application
+# Copier tous les fichiers de l'application
 COPY . .
 
 # Générer le client Prisma et construire l'application
@@ -27,7 +27,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Définissez les arguments
+# Définir les arguments
 ARG POSTGRES_USER
 ARG POSTGRES_PASSWORD
 ARG POSTGRES_DB
@@ -36,7 +36,7 @@ ARG POSTGRES_HOST
 ARG JWT_SECRET
 ARG NODE_ENV
 
-# Définissez les variables d'environnement
+# Définir les variables d'environnement
 ENV POSTGRES_USER=${POSTGRES_USER}
 ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 ENV POSTGRES_DB=${POSTGRES_DB}
@@ -46,8 +46,8 @@ ENV DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_H
 ENV JWT_SECRET=${JWT_SECRET}
 ENV NODE_ENV=${NODE_ENV} 
 
-# Exposez le port pour NestJS
+# Exposer le port pour NestJS
 EXPOSE 3000
 
-# Démarrez l'application en mode production
+# Démarrer l'application en mode production
 CMD ["node", "dist/src/main.js"]

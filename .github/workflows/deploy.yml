@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main  # ou master selon votre workflow
+      - main  # Déclenche le workflow sur les pushes à la branche principale
 
 jobs:
   build:
@@ -13,31 +13,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: List files in repository
+      - name: Build Backend Docker image
         run: |
-          echo "Listing files in the repository..."
-          ls -la
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build the project
-        run: npm run build
-
-      - name: List files after build
-        run: |
-          echo "Listing files after build..."
-          ls -la
-
-      - name: Build Docker image
-        run: |
-          echo "Building Docker image..."
-          docker build -f Dockerfile.prod \
+          echo "Building Docker image for backend..."
+          docker build -f backend/Dockerfile \
             --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
             --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
             --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
@@ -45,19 +24,27 @@ jobs:
             --build-arg POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
             --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
             --build-arg NODE_ENV=production \
-            -t djosh35/tickly-back:${{ github.sha }} .
+            -t djosh35/tickly-back:${{ github.sha }} ./backend
+
+      - name: Build Frontend Docker image
+        run: |
+          echo "Building Docker image for frontend..."
+          docker build -f frontend/Dockerfile.prod -t djosh35/tickly-frontend:${{ github.sha }} ./frontend
 
       - name: Log in to Docker Hub
         run: |
           echo "Logging in to Docker Hub..."
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Push Docker image to Docker Hub
+      - name: Push Docker images to Docker Hub
         run: |
           echo "Pushing Docker images to Docker Hub..."
           docker tag djosh35/tickly-back:${{ github.sha }} djosh35/tickly-back:latest
+          docker tag djosh35/tickly-frontend:${{ github.sha }} djosh35/tickly-frontend:latest
           docker push djosh35/tickly-back:${{ github.sha }}
           docker push djosh35/tickly-back:latest
+          docker push djosh35/tickly-frontend:${{ github.sha }}
+          docker push djosh35/tickly-frontend:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -68,11 +55,6 @@ jobs:
         run: |
           echo "Installing sshpass..."
           sudo apt-get install -y sshpass
-
-      - name: Check for docker-compose file on VPS
-        run: |
-          echo "Checking for docker-compose file on VPS..."
-          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "ls -la /root/tickly/docker-compose.prod.yml"
 
       - name: Deploy to VPS using Docker Compose
         run: |

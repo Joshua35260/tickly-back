@@ -13,7 +13,9 @@ services:
       - '5432:5432'
 
   tickly-back:
-    image: djosh35/tickly-back:latest
+    build:
+      context: ./backend  # Chemin vers le Dockerfile du backend
+      dockerfile: Dockerfile  # Assure-toi que ton Dockerfile est nommé correctement
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -29,6 +31,18 @@ services:
       default:
         aliases:
           - tickly-back
+
+  tickly-frontend:
+    build:
+      context: ./frontend  # Chemin vers ton Dockerfile Angular
+      dockerfile: Dockerfile.prod  # Assure-toi que ton Dockerfile est nommé correctement
+    restart: unless-stopped
+    ports:
+      - '8080:80'  # Mappe le port 80 du conteneur sur le port 8080 de l'hôte
+    networks:
+      default:
+        aliases:
+          - tickly-frontend
 
 volumes:
   postgres:
