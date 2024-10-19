@@ -69,22 +69,10 @@ jobs:
           echo "Installing sshpass..."
           sudo apt-get install -y sshpass
 
-      - name: Ensure /root/tickly directory exists on VPS
+      - name: Check for docker-compose file on VPS
         run: |
-          echo "Ensuring /root/tickly directory exists on VPS..."
-          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-            mkdir -p /root/tickly
-          EOF
-
-      - name: Copy docker-compose file to VPS
-        run: |
-          echo "Copying docker-compose file to VPS..."
-          sshpass -p "${{ secrets.VPS_PASSWORD }}" scp -o StrictHostKeyChecking=no docker-compose.prod.yml root@${{ secrets.SERVER_IP }}:/root/tickly/
-
-      - name: Verify file on VPS
-        run: |
-          echo "Verifying docker-compose file on VPS..."
-          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "ls -la /root/tickly/"
+          echo "Checking for docker-compose file on VPS..."
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "ls -la /root/tickly/docker-compose.prod.yml"
 
       - name: Deploy to VPS using Docker Compose
         run: |
