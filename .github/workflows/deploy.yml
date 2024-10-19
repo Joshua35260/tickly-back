@@ -31,8 +31,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build \
-            -f Dockerfile.prod \  # Spécifie le Dockerfile pour la prod
+          docker build -f Dockerfile.prod \
             --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
             --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
             --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
