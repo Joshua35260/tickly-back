@@ -64,13 +64,12 @@ jobs:
             mkdir -p /root/tickly
           EOF
 
-          - name: Deploy to VPS using Docker Compose
-          run: |
-            sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-              cd /root/tickly/
-              docker-compose -f docker-compose.prod.yml down  # Stoppe et supprime l'ancien conteneur
-              docker-compose -f docker-compose.prod.yml pull  # Tirez la dernière image
-              docker-compose -f docker-compose.prod.yml up -d  # Démarre le nouveau conteneur
-              docker-compose -f docker-compose.prod.yml ps  # Vérifie l'état des conteneurs
-            EOF
-        
+      - name: Deploy to VPS using Docker Compose
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
+            cd /root/tickly/
+            docker-compose -f docker-compose.prod.yml down  # Stoppe et supprime l'ancien conteneur
+            docker-compose -f docker-compose.prod.yml pull  # Tirez la dernière image
+            docker-compose -f docker-compose.prod.yml up -d  # Démarre le nouveau conteneur
+            docker-compose -f docker-compose.prod.yml ps  # Vérifie l'état des conteneurs
+          EOF
