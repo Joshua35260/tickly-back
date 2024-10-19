@@ -1,53 +1,24 @@
-# Étape 1: Construction de l'image
 FROM node:22 AS builder
 
+# Create app directory
 WORKDIR /app
 
-# Copiez les fichiers package.json et installez les dépendances
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
-RUN npm install
-
-# Copiez les fichiers Prisma
 COPY prisma ./prisma/
 
-# Copiez tous les fichiers de l'application
+# Install app dependencies
+RUN npm install
+
 COPY . .
 
-# Générer le client Prisma et construire l'application
-RUN npx prisma generate
 RUN npm run build
 
-# Étape 2: Image finale
 FROM node:22
 
-WORKDIR /app
-
-# Copier les fichiers nécessaires depuis le builder
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
 
-# Définissez les arguments
-ARG POSTGRES_USER
-ARG POSTGRES_PASSWORD
-ARG POSTGRES_DB
-ARG POSTGRES_PORT
-ARG POSTGRES_HOST
-ARG JWT_SECRET
-ARG NODE_ENV
-
-# Définissez les variables d'environnement
-ENV POSTGRES_USER=${POSTGRES_USER}
-ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-ENV POSTGRES_DB=${POSTGRES_DB}
-ENV POSTGRES_PORT=${POSTGRES_PORT}
-ENV POSTGRES_HOST=${POSTGRES_HOST}
-ENV DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
-ENV JWT_SECRET=${JWT_SECRET}
-ENV NODE_ENV=${NODE_ENV} 
-
-# Exposez le port pour NestJS
 EXPOSE 3000
-
-# Démarrez l'application en mode production
-CMD ["node", "dist/src/main.js"]
+CMD [ "npm", "run", "start:prod" ]

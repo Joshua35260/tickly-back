@@ -5,6 +5,7 @@ POSTGRES_PORT=5432
 POSTGRES_HOST=localhost
 DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public
 JWT_SECRET=la clé top secrète
+JWT_EXPIRATION_TIME= 10 000 ans
 # See https://www.prisma.io/docs/concepts/database-connectors/postgresql
 # Host value is the default container name for postgres - @nest-postgres:5432
 # change it when changing the container name

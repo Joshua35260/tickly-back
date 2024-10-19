@@ -35,12 +35,11 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^7.4.0",
     "@prisma/client": "^5.18.0",
-    "alayde-back": "file:",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "cookie-parser": "^1.4.7",
-    "jest-mock-extended": "^4.0.0-beta1",
+    "cookie-parser": "^1.4.6",
+    "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
@@ -90,12 +89,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "clearMocks": true,
-    "setupFilesAfterEnv": [
-      "<rootDir>/../singleton.ts"
-    ],
-    "preset": "ts-jest"
+    "testEnvironment": "node"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

@@ -27,6 +27,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
+            -f Dockerfile.prod \  # Spécifie le Dockerfile pour la prod
             --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
             --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
             --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
@@ -65,8 +66,8 @@ jobs:
             cd /root/tickly/
             # Vous pouvez inclure un fichier .env ici si nécessaire
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env # Ajoutez cette ligne si nécessaire
-            docker-compose pull
-            docker-compose down
-            docker-compose up -d
-            docker-compose ps
+            docker-compose -f docker-compose.prod.yml pull  # Utilise le fichier docker-compose pour la prod
+            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml ps
           EOF
