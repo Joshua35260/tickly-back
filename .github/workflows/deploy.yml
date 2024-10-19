@@ -13,6 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: List files in repository
+        run: |
+          echo "Listing files in the repository..."
+          ls -la
+
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
@@ -24,8 +29,14 @@ jobs:
       - name: Build the project
         run: npm run build
 
+      - name: List files after build
+        run: |
+          echo "Listing files after build..."
+          ls -la
+
       - name: Build Docker image
         run: |
+          echo "Building Docker image..."
           docker build -f Dockerfile.prod \
             --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
             --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
@@ -37,10 +48,13 @@ jobs:
             -t djosh35/tickly-back:${{ github.sha }} .
 
       - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: |
+          echo "Logging in to Docker Hub..."
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Push Docker image to Docker Hub
         run: |
+          echo "Pushing Docker images to Docker Hub..."
           docker tag djosh35/tickly-back:${{ github.sha }} djosh35/tickly-back:latest
           docker push djosh35/tickly-back:${{ github.sha }}
           docker push djosh35/tickly-back:latest
@@ -51,20 +65,30 @@ jobs:
 
     steps:
       - name: Install sshpass
-        run: sudo apt-get install -y sshpass
+        run: |
+          echo "Installing sshpass..."
+          sudo apt-get install -y sshpass
 
       - name: Ensure /root/tickly directory exists on VPS
         run: |
+          echo "Ensuring /root/tickly directory exists on VPS..."
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
             mkdir -p /root/tickly
           EOF
 
       - name: Copy docker-compose file to VPS
         run: |
+          echo "Copying docker-compose file to VPS..."
           sshpass -p "${{ secrets.VPS_PASSWORD }}" scp -o StrictHostKeyChecking=no docker-compose.prod.yml root@${{ secrets.SERVER_IP }}:/root/tickly/
+
+      - name: Verify file on VPS
+        run: |
+          echo "Verifying docker-compose file on VPS..."
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "ls -la /root/tickly/"
 
       - name: Deploy to VPS using Docker Compose
         run: |
+          echo "Deploying to VPS using Docker Compose..."
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
             cd /root/tickly/
             docker-compose -f docker-compose.prod.yml down  # Stoppe et supprime l'ancien conteneur
