@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: CI/CD for Full Stack
 
 on:
   push:
@@ -6,63 +6,57 @@ on:
       - main  # Déclenche le workflow sur les pushes à la branche principale
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # Étape 1: Récupérer le code source depuis le dépôt
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Build Backend Docker image
-        run: |
-          echo "Building Docker image for backend..."
-          docker build -f backend/Dockerfile \
-            --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
-            --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
-            --build-arg POSTGRES_PORT=${{ secrets.POSTGRES_PORT }} \
-            --build-arg POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
-            --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
-            --build-arg NODE_ENV=production \
-            -t djosh35/tickly-back:${{ github.sha }} ./backend
-
-      - name: Build Frontend Docker image
-        run: |
-          echo "Building Docker image for frontend..."
-          docker build -f frontend/Dockerfile.prod -t djosh35/tickly-frontend:${{ github.sha }} ./frontend
-
+      # Étape 2: Se connecter à Docker Hub
       - name: Log in to Docker Hub
         run: |
-          echo "Logging in to Docker Hub..."
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      # Étape 3: Construire l'image Docker pour le frontend
+      - name: Build Docker image for frontend
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/tickly-frontend:latest -f frontend/Dockerfile.prod ./frontend
+
+      # Étape 4: Construire l'image Docker pour le backend
+      - name: Build Docker image for backend
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest -f ./backend/Dockerfile .
+
+      # Étape 5: Pousser les images Docker sur Docker Hub
       - name: Push Docker images to Docker Hub
         run: |
-          echo "Pushing Docker images to Docker Hub..."
-          docker tag djosh35/tickly-back:${{ github.sha }} djosh35/tickly-back:latest
-          docker tag djosh35/tickly-frontend:${{ github.sha }} djosh35/tickly-frontend:latest
-          docker push djosh35/tickly-back:${{ github.sha }}
-          docker push djosh35/tickly-back:latest
-          docker push djosh35/tickly-frontend:${{ github.sha }}
-          docker push djosh35/tickly-frontend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/tickly-frontend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
+      # Étape 6: Installer sshpass
       - name: Install sshpass
-        run: |
-          echo "Installing sshpass..."
-          sudo apt-get install -y sshpass
+        run: sudo apt-get install -y sshpass
 
-      - name: Deploy to VPS using Docker Compose
+      # Étape 7: Déployer sur le VPS
+      - name: Deploy to VPS
         run: |
-          echo "Deploying to VPS using Docker Compose..."
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /root/tickly/
-            docker-compose -f docker-compose.prod.yml down  # Stoppe et supprime l'ancien conteneur
-            docker-compose -f docker-compose.prod.yml pull  # Tirez la dernière image
-            docker-compose -f docker-compose.prod.yml up -d  # Démarre le nouveau conteneur
-            docker-compose -f docker-compose.prod.yml ps  # Vérifie l'état des conteneurs
+            # Naviguer vers le répertoire de l'application sur le VPS
+            cd /root/tickly
+
+            # Arrêter et supprimer les conteneurs existants
+            docker-compose -f docker-compose.prod.yml down
+
+            # Télécharger les nouvelles images
+            docker-compose -f docker-compose.prod.yml pull
+
+            # Démarrer les nouveaux conteneurs
+            docker-compose -f docker-compose.prod.yml up -d
           EOF
+
+      # Étape 8: Vérifier l'état des conteneurs sur le VPS
+      - name: Check Docker container status
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "docker ps"
