@@ -43,7 +43,15 @@ jobs:
             docker-compose -f docker-compose.prod.yml up -d
           EOF
 
-      # Étape 7: Vérifier l'état des conteneurs sur le VPS
+      # Étape 7: Exécuter les migrations Prisma
+      - name: Run Prisma Migrations
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
+            cd /root/tickly
+            docker exec tickly-back npx prisma migrate deploy
+          EOF
+
+      # Étape 8: Vérifier l'état des conteneurs sur le VPS
       - name: Check Docker container status
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "docker ps"
