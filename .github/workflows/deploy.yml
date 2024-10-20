@@ -22,13 +22,11 @@ jobs:
       # Étape 3: Construire l'image Docker pour le backend
       - name: Build Docker image for backend
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest -f Dockerfile .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest -f Dockerfile.prod .
 
       # Étape 4: Vérifier le contenu du dossier dist dans l'image
       - name: Check build output
         run: |
-          docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app
-          docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist
           docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/src
           docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/prisma
       # Étape 5: Pousser l'image Docker sur Docker Hub
