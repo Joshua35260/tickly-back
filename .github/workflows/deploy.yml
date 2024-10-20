@@ -24,16 +24,21 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest -f Dockerfile .
 
-      # Étape 4: Pousser l'image Docker sur Docker Hub
+      # Étape 4: Vérifier le contenu du dossier dist dans l'image
+      - name: Check build output
+        run: |
+          docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/src
+          docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/prisma
+      # Étape 5: Pousser l'image Docker sur Docker Hub
       - name: Push Docker image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest
 
-      # Étape 5: Installer sshpass
+      # Étape 6: Installer sshpass
       - name: Install sshpass
         run: sudo apt-get install -y sshpass
 
-      # Étape 6: Déployer sur le VPS
+      # Étape 7: Déployer sur le VPS
       - name: Deploy to VPS
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
@@ -43,7 +48,7 @@ jobs:
             docker-compose -f docker-compose.prod.yml up -d
           EOF
 
-      # Étape 7: Exécuter les migrations Prisma
+      # Étape 8: Exécuter les migrations Prisma
       - name: Run Prisma Migrations
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
@@ -51,7 +56,7 @@ jobs:
             docker exec tickly-back npx prisma migrate deploy
           EOF
 
-      # Étape 8: Vérifier l'état des conteneurs sur le VPS
+      # Étape 9: Vérifier l'état des conteneurs sur le VPS
       - name: Check Docker container status
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "docker ps"
