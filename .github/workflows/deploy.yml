@@ -29,6 +29,7 @@ jobs:
         run: |
           docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/src
           docker run --rm ${{ secrets.DOCKER_USERNAME }}/tickly-back:latest ls -la /app/dist/prisma
+
       # Étape 5: Pousser l'image Docker sur Docker Hub
       - name: Push Docker image to Docker Hub
         run: |
@@ -42,6 +43,9 @@ jobs:
       - name: Deploy to VPS
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} << 'EOF'
+            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             cd /root/tickly
             docker-compose -f docker-compose.prod.yml down
             docker-compose -f docker-compose.prod.yml pull
@@ -60,4 +64,3 @@ jobs:
       - name: Check Docker container status
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "docker ps"
-          
