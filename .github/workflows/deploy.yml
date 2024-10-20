@@ -46,6 +46,7 @@ jobs:
             export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
             export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            EXPORT JWT_EXPIRATION_TIME="${{ secrets.JWT_EXPIRATION_TIME }}"
             cd /root/tickly
             docker-compose -f docker-compose.prod.yml down
             docker-compose -f docker-compose.prod.yml pull
