@@ -60,3 +60,7 @@ jobs:
       - name: Check Docker container status
         run: |
           sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@${{ secrets.SERVER_IP }} "docker ps"
+          echo "POSTGRES_USER=${POSTGRES_USER}"
+          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+          echo "POSTGRES_DB=${POSTGRES_DB}"
+          echo "POSTGRES_HOST=${POSTGRES_HOST}"
