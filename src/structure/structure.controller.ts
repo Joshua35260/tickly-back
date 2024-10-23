@@ -44,6 +44,8 @@ export class StructureController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOkResponse({ type: StructureEntity, isArray: true })
   @ApiExtraModels(PaginationDto, FilterStructureDto) // Indiquer à Swagger d'utiliser ce DTO
   findAll(
@@ -79,5 +81,45 @@ export class StructureController {
   @ApiOkResponse({ type: StructureEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.structureService.remove(id);
+  }
+
+  // *** Ajouter un utilisateur à une structure ***
+  @Post(':structureId/users/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCreatedResponse({
+    description: 'User added to structure',
+    type: StructureEntity,
+  })
+  addUserToStructure(
+    @Param('structureId', ParseIntPipe) structureId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.structureService.addUserToStructure(
+      structureId,
+      userId,
+      request,
+    );
+  }
+
+  // *** Retirer un utilisateur d'une structure ***
+  @Delete(':structureId/users/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOkResponse({
+    description: 'User removed from structure',
+    type: StructureEntity,
+  })
+  removeUserFromStructure(
+    @Param('structureId', ParseIntPipe) structureId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.structureService.removeUserFromStructure(
+      structureId,
+      userId,
+      request,
+    );
   }
 }

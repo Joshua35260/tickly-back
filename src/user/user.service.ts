@@ -1,25 +1,39 @@
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Prisma, User } from '@prisma/client';
 import { RoleType } from '../../src/shared/enum/role.enum';
 import { PaginationDto } from '../../src/shared/dto/pagination.dto';
-import { JobType } from '../../src/shared/enum/job-type.enum';
 import { FilterUserDto } from './dto/filter-user.dto';
+import { AuthenticatedRequest } from 'src/auth/auth.service';
+import { AuditLogService } from 'src/auditlog/auditlog.service';
+import { UserEntity } from './entities/user.entity';
+import { PrismaService } from 'prisma/prisma.service';
 
 export const roundsOfHashing = 10;
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLogService: AuditLogService,
+  ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(
+    createUserDto: CreateUserDto,
+    request: AuthenticatedRequest, // Ajouter la requête authentifiée
+  ): Promise<Omit<User, 'password'>> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     // Hash password if provided
     if (createUserDto.password) {
       createUserDto.password = await bcrypt.hash(
@@ -30,85 +44,65 @@ export class UserService {
 
     const defaultRole = RoleType.CLIENT;
 
-    // Prepare jobType connection
-    const jobTypeInput = {
-      connect: { jobType: createUserDto.jobType },
+    // Créez l'entrée d'adresse
+    const addressInput = {
+      create: {
+        country: createUserDto.address.country,
+        city: createUserDto.address.city,
+        streetL1: createUserDto.address.streetL1,
+        streetL2: createUserDto.address.streetL2,
+        postcode: createUserDto.address.postcode,
+        latitude: createUserDto.address.latitude,
+        longitude: createUserDto.address.longitude,
+      },
     };
 
-    let addressInput; // Déclare la variable ici
-
-    // Check if the user is an employee
-    if (createUserDto.jobType !== JobType.EMPLOYEE) {
-      // non employee must have an address
-      if (!createUserDto.address) {
-        throw new BadRequestException('Freelancers must have an address.');
-      }
-
-      // Check if the address already exists
-      if (createUserDto.address.id) {
-        // If an address ID is provided, connect to the existing address
-        addressInput = {
-          connect: { id: createUserDto.address.id },
-        };
-      } else {
-        // Otherwise, create a new address
-        addressInput = {
-          create: {
-            country: createUserDto.address.country,
-            city: createUserDto.address.city,
-            streetL1: createUserDto.address.streetL1,
-            streetL2: createUserDto.address.streetL2,
-            postcode: createUserDto.address.postcode,
-            latitude: createUserDto.address.latitude,
-            longitude: createUserDto.address.longitude,
+    // Transaction pour créer l'utilisateur et l'audit
+    return await this.prisma.$transaction(async (prisma) => {
+      // Tentative de création de l'utilisateur
+      const newUser = await prisma.user.create({
+        data: {
+          firstname: createUserDto.firstname,
+          lastname: createUserDto.lastname,
+          login: createUserDto.login,
+          password: createUserDto.password,
+          phones: {
+            create: createUserDto.phones || [],
           },
-        };
-      }
-    } else {
-      // Non-freelancers must have at least one structure ID
-      if (!createUserDto.structures || createUserDto.structures.length === 0) {
-        throw new BadRequestException(
-          'Non-freelance users must be associated with at least one structure.',
-        );
-      }
-    }
-
-    // Attempt to create user
-    return await this.prisma.user.create({
-      data: {
-        firstname: createUserDto.firstname,
-        lastname: createUserDto.lastname,
-        login: createUserDto.login,
-        password: createUserDto.password,
-        phones: {
-          create: createUserDto.phones || [],
-        },
-        emails: {
-          create: createUserDto.emails || [],
-        },
-        roles: {
-          connectOrCreate: {
-            where: { role: defaultRole },
-            create: { role: defaultRole },
+          emails: {
+            create: createUserDto.emails || [],
+          },
+          roles: {
+            connectOrCreate: {
+              where: { role: defaultRole },
+              create: { role: defaultRole },
+            },
+          },
+          address: addressInput,
+          jobType: {
+            connect: { jobType: createUserDto.jobType },
           },
         },
-        // Add address input (either connect or create)
-        address: addressInput,
-        jobType: jobTypeInput,
-        structures: createUserDto.structures
-          ? {
-              connect: createUserDto.structures.map((id) => ({ id })), // Connect existing structures by ID
-            }
-          : undefined,
-      },
-      include: {
-        phones: true,
-        emails: true,
-        roles: true,
-        address: true,
-        jobType: true,
-        structures: true,
-      },
+        include: {
+          phones: true,
+          emails: true,
+          roles: true,
+          address: true,
+          jobType: true,
+        },
+        omit: { password: true },
+      });
+
+      // Log de l'audit pour la création de l'utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id, // Utilisateur actuel
+        newUser.id, // ID de l'utilisateur créé
+        'User', // Table liée
+        'CREATE', // Action de création
+        [], // Aucun champ modifié pour une création
+      );
+
+      return newUser; // Retourner l'utilisateur nouvellement créé, sans mot de passe
     });
   }
 
@@ -175,6 +169,7 @@ export class UserService {
           address: true,
           structures: true,
         },
+        omit: { password: true },
       }),
       this.prisma.user.count({ where }),
     ]);
@@ -185,9 +180,161 @@ export class UserService {
       total: totalCount,
       items: users.map((user) => ({
         ...user,
-        password: undefined, // On omet le mot de passe
       })),
     };
+  }
+  async update(
+    id: number,
+    updateUserDto: UpdateUserDto,
+    request: AuthenticatedRequest,
+  ): Promise<Omit<User, 'password'> | null> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return await this.prisma.$transaction(async (prisma) => {
+      // Définir le type de `existingUser`
+      const existingUser = (await prisma.user.findUnique({
+        where: { id },
+        include: {
+          phones: true,
+          emails: true,
+          roles: true,
+          address: true,
+          jobType: true,
+        },
+      })) as UserEntity;
+
+      if (!existingUser) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+
+      if (updateUserDto.password) {
+        updateUserDto.password = await bcrypt.hash(
+          updateUserDto.password,
+          roundsOfHashing,
+        );
+      }
+
+      const { phones, emails, roles, address, jobType, ...userData } =
+        updateUserDto;
+
+      const updateData: any = {
+        ...userData,
+        phones:
+          phones?.length > 0
+            ? {
+                update: phones
+                  .filter((phone) => phone.id)
+                  .map((phone) => ({
+                    where: { id: phone.id },
+                    data: {
+                      phone: phone.phone,
+                      type: phone.type,
+                    },
+                  })),
+                create: phones
+                  .filter((phone) => !phone.id)
+                  .map((phone) => ({
+                    phone: phone.phone,
+                    type: phone.type,
+                  })),
+              }
+            : undefined,
+        emails:
+          emails?.length > 0
+            ? {
+                update: emails
+                  .filter((email) => email.id)
+                  .map((email) => ({
+                    where: { id: email.id },
+                    data: {
+                      email: email.email,
+                      type: email.type,
+                    },
+                  })),
+                create: emails
+                  .filter((email) => !email.id)
+                  .map((email) => ({
+                    email: email.email,
+                    type: email.type,
+                  })),
+              }
+            : undefined,
+        roles:
+          roles?.length > 0
+            ? {
+                set: roles.map((role) => ({ role })),
+                connectOrCreate: roles.map((role) => ({
+                  where: { role },
+                  create: { role },
+                })),
+              }
+            : undefined,
+        address: address
+          ? address.id
+            ? {
+                connect: { id: address.id },
+              }
+            : {
+                create: {
+                  streetL1: address.streetL1,
+                  streetL2: address.streetL2,
+                  postcode: address.postcode,
+                  city: address.city,
+                  country: address.country,
+                  latitude: address.latitude,
+                  longitude: address.longitude,
+                },
+              }
+          : undefined,
+        jobType: jobType ? { connect: { jobType } } : undefined,
+      };
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        include: {
+          phones: true,
+          emails: true,
+          roles: true,
+          address: true,
+          jobType: true,
+        },
+        omit: { password: true },
+      });
+
+      // Comparer les champs modifiés pour le log d'audit
+      const modifiedFields = (
+        Object.keys(updateUserDto) as Array<keyof UpdateUserDto>
+      )
+        .filter((key) => {
+          // Vérifiez si la clé existe dans existingUser avant d'accéder
+          if (key in existingUser) {
+            const oldValue = existingUser[key];
+            const newValue = updateUserDto[key];
+            return oldValue !== newValue; // Comparer les anciennes et nouvelles valeurs
+          }
+          return false; // Ignore les clés non valides
+        })
+        .map((key) => ({
+          field: key as string,
+          previousValue: existingUser[key]?.toString() || '',
+          newValue: updateUserDto[key]?.toString() || '',
+        }));
+
+      await this.auditLogService.createAuditLog(
+        user.id,
+        updatedUser.id,
+        'User',
+        'UPDATE',
+        modifiedFields,
+      );
+
+      return updatedUser;
+    });
   }
 
   async findOne(id: number): Promise<Omit<User, 'password'> | null> {
@@ -209,90 +356,6 @@ export class UserService {
 
     return user;
   }
-  // omit: { password: true },
-  async update(
-    id: number,
-    updateUserDto: UpdateUserDto,
-  ): Promise<Omit<User, 'password'> | null> {
-    // Hash password if provided
-    if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(
-        updateUserDto.password,
-        roundsOfHashing,
-      );
-    }
-
-    const { phones, emails, roles, ...userData } = updateUserDto;
-
-    const updateData: any = {
-      ...userData,
-    };
-
-    // Mettre à jour les téléphones s'ils sont fournis
-    if (phones?.length > 0) {
-      updateData.phones = {
-        update: phones
-          .filter((phone) => phone.id) // Update only if the phone has an ID
-          .map((phone) => ({
-            where: { id: phone.id },
-            data: {
-              phone: phone.phone,
-              type: phone.type,
-            },
-          })),
-        create: phones
-          .filter((phone) => !phone.id) // Create new phone if it has no ID
-          .map((phone) => ({
-            phone: phone.phone,
-            type: phone.type,
-          })),
-      };
-    }
-
-    // Mettre à jour les e-mails s'ils sont fournis
-    if (emails?.length > 0) {
-      updateData.emails = {
-        update: emails
-          .filter((email) => email.id) // Update only if the email has an ID
-          .map((email) => ({
-            where: { id: email.id },
-            data: {
-              email: email.email,
-              type: email.type,
-            },
-          })),
-        create: emails
-          .filter((email) => !email.id) // Create new email if it has no ID
-          .map((email) => ({
-            email: email.email,
-            type: email.type,
-          })),
-      };
-    }
-
-    // Ne mettre à jour les rôles que s'ils sont fournis
-    if (roles?.length > 0) {
-      updateData.roles = {
-        set: roles.map((role) => ({ role })),
-        connectOrCreate: roles.map((role) => ({
-          where: { role },
-          create: { role },
-        })),
-      };
-    }
-
-    // Exécuter la mise à jour de l'utilisateur
-    return await this.prisma.user.update({
-      where: { id },
-      data: updateData,
-      include: {
-        phones: true,
-        emails: true,
-        roles: true,
-      },
-      omit: { password: true },
-    });
-  }
 
   async remove(id: number): Promise<Omit<User, 'password'> | null> {
     return this.prisma.user.delete({ where: { id }, omit: { password: true } });
@@ -302,6 +365,98 @@ export class UserService {
     return this.prisma.user.findUnique({
       where: { login },
       omit: { password: true },
+    });
+  }
+
+  // relation between user and structure
+  async addStructureToUser(
+    userId: number,
+    structureId: number,
+    request: AuthenticatedRequest,
+  ) {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    return await this.prisma.$transaction(async (prisma) => {
+      // Mise à jour de l'utilisateur en ajoutant la structure
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          structures: {
+            connect: { id: structureId }, // Connecter la structure à l'utilisateur
+          },
+        },
+        include: {
+          structures: true, // Inclure les structures mises à jour
+        },
+      });
+
+      // Log d'audit pour l'ajout d'une structure
+      await this.auditLogService.createAuditLog(
+        user.id,
+        userId,
+        'User',
+        'ADD_STRUCTURE',
+        [
+          {
+            field: 'structures',
+            previousValue: '',
+            newValue: structureId.toString(),
+          },
+        ],
+      );
+
+      return updatedUser; // Retourner l'utilisateur mis à jour
+    });
+  }
+
+  // Méthode pour retirer une structure d'un utilisateur
+  async removeStructureFromUser(
+    userId: number,
+    structureId: number,
+    request: AuthenticatedRequest,
+  ) {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    return await this.prisma.$transaction(async (prisma) => {
+      // Mise à jour de l'utilisateur en retirant la structure
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          structures: {
+            disconnect: { id: structureId }, // Déconnecter la structure de l'utilisateur
+          },
+        },
+        include: {
+          structures: true, // Inclure les structures mises à jour
+        },
+      });
+
+      // Log d'audit pour la suppression d'une structure
+      await this.auditLogService.createAuditLog(
+        user.id,
+        userId,
+        'User',
+        'REMOVE_STRUCTURE',
+        [
+          {
+            field: 'structures',
+            previousValue: structureId.toString(),
+            newValue: '',
+          },
+        ],
+      );
+
+      return updatedUser; // Retourner l'utilisateur mis à jour
     });
   }
 }

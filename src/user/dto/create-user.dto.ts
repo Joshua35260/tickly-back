@@ -19,11 +19,6 @@ import { JobType } from 'src/shared/enum/job-type.enum';
 import { RoleType } from 'src/shared/enum/role.enum';
 
 export class CreateUserDto {
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ required: false, nullable: false })
-  id?: number;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
@@ -58,8 +53,7 @@ export class CreateUserDto {
   })
   phones: PhoneDto[];
 
-  @ValidateIf((o) => o.jobType !== JobType.EMPLOYEE)
-  @IsOptional({ message: 'Address is required for non employee.' })
+  @IsNotEmpty({ message: 'Address is required' })
   @ApiProperty({ nullable: false, required: false }) // Pour être optionnel pour les employee
   address: CreateAddressDto;
 
@@ -88,16 +82,16 @@ export class CreateUserDto {
   @ApiProperty({ required: true, enum: JobType })
   jobType: JobType;
 
+  @ApiProperty({
+    required: true,
+    type: [Number],
+    nullable: false,
+  })
   @ValidateIf((o) => o.jobType !== JobType.FREELANCE)
   @IsArray()
   @IsNotEmpty({
     message: 'At least one structure ID is required for non-freelancers.',
   })
   @IsNumber({}, { each: true })
-  @ApiProperty({
-    required: true,
-    type: [Number],
-    nullable: false,
-  })
   structures: number[];
 }

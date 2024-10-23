@@ -73,17 +73,4 @@ export class UserDto {
   @IsNotEmpty()
   @ApiProperty({ required: true, enum: JobType })
   jobType: JobType;
-
-  @ValidateIf((o) => o.jobType !== JobType.FREELANCE)
-  @IsArray()
-  @IsNotEmpty({
-    message: 'At least one structure ID is required for non-freelancers.',
-  })
-  @IsNumber({}, { each: true })
-  @ApiProperty({
-    required: true,
-    type: [Number],
-    nullable: false,
-  })
-  structures: number[];
 }

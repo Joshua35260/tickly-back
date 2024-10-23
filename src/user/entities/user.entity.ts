@@ -12,6 +12,7 @@ import {
   IsArray,
   IsOptional,
 } from 'class-validator';
+import { StructureEntity } from 'src/structure/entities/structure.entity';
 
 export class UserEntity implements User {
   @IsNumber()
@@ -73,4 +74,7 @@ export class UserEntity implements User {
 
   @ApiProperty({ required: false, nullable: false })
   jobType: JobType;
+
+  @ApiProperty({ required: false, isArray: true })
+  structures: StructureEntity[];
 }

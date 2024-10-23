@@ -311,4 +311,85 @@ export class StructureService {
       where: { id },
     });
   }
+
+  // relation with users
+
+  async addUserToStructure(
+    structureId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Structure> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    return await this.prisma.$transaction(async (prisma) => {
+      // Mise à jour de la structure en ajoutant l'utilisateur
+      const updatedStructure = await prisma.structure.update({
+        where: { id: structureId },
+        data: {
+          users: {
+            connect: { id: userId }, // Connecter l'utilisateur à la structure
+          },
+        },
+        include: {
+          users: true,
+        },
+      });
+
+      // Log d'audit pour l'ajout d'un utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id,
+        structureId,
+        'Structure',
+        'ADD_USER',
+        [{ field: 'users', previousValue: '', newValue: userId.toString() }],
+      );
+
+      return updatedStructure; // Retourner la structure mise à jour
+    });
+  }
+
+  // Suppression d'un utilisateur d'une structure avec transaction
+  async removeUserFromStructure(
+    structureId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Structure> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    return await this.prisma.$transaction(async (prisma) => {
+      // Mise à jour de la structure en retirant l'utilisateur
+      const updatedStructure = await prisma.structure.update({
+        where: { id: structureId },
+        data: {
+          users: {
+            disconnect: { id: userId }, // Déconnecter l'utilisateur de la structure
+          },
+        },
+        include: {
+          users: true,
+        },
+      });
+
+      // Log d'audit pour la suppression d'un utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id,
+        structureId,
+        'Structure',
+        'REMOVE_USER',
+        [{ field: 'users', previousValue: userId.toString(), newValue: '' }],
+      );
+
+      return updatedStructure; // Retourner la structure mise à jour
+    });
+  }
 }
