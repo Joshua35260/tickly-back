@@ -45,7 +45,7 @@ export class FilterStructureDto {
     description: 'Filter by structure emails',
     type: String,
   })
-  emails?: string;
+  email?: string;
 
   @IsOptional()
   @IsString()
@@ -54,7 +54,7 @@ export class FilterStructureDto {
     description: 'Filter by structure phones',
     type: String,
   })
-  phones?: string;
+  phone?: string;
 
   @IsOptional()
   @IsArray()

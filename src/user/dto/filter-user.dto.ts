@@ -32,14 +32,6 @@ export class FilterUserDto {
   @IsOptional()
   @ApiProperty({
     required: false,
-    description: 'Filter by user job type',
-    type: String,
-  })
-  jobType?: string;
-
-  @IsOptional()
-  @ApiProperty({
-    required: false,
     description: 'Filter by user roles',
     type: String,
   })
@@ -52,7 +44,7 @@ export class FilterUserDto {
     description: 'Filter by user phone',
     type: String,
   })
-  phones?: string;
+  phone?: string;
 
   @IsOptional()
   @IsString()
@@ -61,7 +53,7 @@ export class FilterUserDto {
     description: 'Filter by user mail',
     type: String,
   })
-  emails?: string;
+  email?: string;
 
   @IsOptional()
   @IsString()

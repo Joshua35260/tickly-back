@@ -1,4 +1,4 @@
-import { Address, Email, JobType, Phone, Role, User } from '@prisma/client';
+import { Address, Role, User } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleType } from 'src/shared/enum/role.enum';
 import {
@@ -9,8 +9,6 @@ import {
   MaxLength,
   MinLength,
   IsEnum,
-  IsArray,
-  IsOptional,
 } from 'class-validator';
 import { StructureEntity } from 'src/structure/entities/structure.entity';
 
@@ -48,32 +46,19 @@ export class UserEntity implements User {
   @ApiProperty({ required: false, enum: RoleType, isArray: true })
   roles: Role[];
 
-  @IsArray()
-  @IsOptional()
-  @ApiProperty({ required: false, nullable: true })
-  emails: Email[];
+  @IsEmail()
+  @ApiProperty({ required: true, nullable: false })
+  email: string;
 
-  @IsArray()
-  @IsOptional()
-  @ApiProperty({
-    required: false,
-    nullable: true,
-  })
-  @IsArray()
+  @IsString()
   @ApiProperty({ required: false, nullable: true })
-  phones: Phone[];
+  phone: string;
 
   @ApiProperty({ required: false, nullable: false })
   addressId: number;
 
   @ApiProperty({ required: false, nullable: false })
   address: Address;
-
-  @ApiProperty({ required: false, nullable: false })
-  jobTypeId: string;
-
-  @ApiProperty({ required: false, nullable: false })
-  jobType: JobType;
 
   @ApiProperty({ required: false, isArray: true })
   structures: StructureEntity[];

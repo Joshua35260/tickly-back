@@ -35,12 +35,8 @@ export class StructureService {
           name: createStructureDto.name,
           type: createStructureDto.type,
           service: createStructureDto.service,
-          emails: {
-            create: createStructureDto.emails || [],
-          },
-          phones: {
-            create: createStructureDto.phones || [],
-          },
+          email: createStructureDto.email,
+          phone: createStructureDto.phone,
           address: {
             create: {
               country: createStructureDto.address.country,
@@ -54,8 +50,6 @@ export class StructureService {
           },
         },
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },
@@ -99,19 +93,12 @@ export class StructureService {
       service: filters?.service
         ? { equals: filters.service, mode: 'insensitive' }
         : undefined,
-      emails: filters?.emails
-        ? {
-            some: {
-              email: { equals: filters.emails }, // Compare directement la chaîne
-            },
-          }
+      email: filters?.email
+        ? { contains: filters.email, mode: 'insensitive' }
         : undefined,
-      phones: filters?.phones
-        ? {
-            some: {
-              phone: { equals: filters.phones }, // Compare directement la chaîne
-            },
-          }
+
+      phone: filters?.phone
+        ? { contains: filters.phone, mode: 'insensitive' }
         : undefined,
       users: filters?.users
         ? {
@@ -137,8 +124,6 @@ export class StructureService {
         take: pageSize,
         include: {
           address: true,
-          emails: true,
-          phones: true,
           users: {
             omit: { password: true },
           },
@@ -159,8 +144,6 @@ export class StructureService {
     return await this.prisma.structure.findUnique({
       where: { id },
       include: {
-        emails: true,
-        phones: true,
         address: true,
         users: {
           omit: { password: true },
@@ -185,8 +168,6 @@ export class StructureService {
       const existingStructure = await prisma.structure.findUnique({
         where: { id },
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },
@@ -201,52 +182,8 @@ export class StructureService {
       // Préparer les données pour la mise à jour
       const updateData: any = {
         ...updateStructureDto, // Inclure tous les champs de la DTO
-        phones: undefined, // Exclure temporairement pour traitement
-        emails: undefined, // Exclure temporairement pour traitement
         address: undefined, // Exclure temporairement pour traitement
       };
-
-      // Mettre à jour les téléphones s'ils sont fournis
-      if (updateStructureDto.phones?.length > 0) {
-        updateData.phones = {
-          update: updateStructureDto.phones
-            .filter((phone) => phone.id) // Ne mettre à jour que les téléphones avec un id
-            .map((phone) => ({
-              where: { id: phone.id },
-              data: {
-                phone: phone.phone,
-                type: phone.type,
-              },
-            })),
-          create: updateStructureDto.phones
-            .filter((phone) => !phone.id) // Créer de nouveaux téléphones sans id
-            .map((phone) => ({
-              phone: phone.phone,
-              type: phone.type,
-            })),
-        };
-      }
-
-      // Mettre à jour les e-mails s'ils sont fournis
-      if (updateStructureDto.emails?.length > 0) {
-        updateData.emails = {
-          update: updateStructureDto.emails
-            .filter((email) => email.id) // Ne mettre à jour que les e-mails avec un id
-            .map((email) => ({
-              where: { id: email.id },
-              data: {
-                email: email.email,
-                type: email.type,
-              },
-            })),
-          create: updateStructureDto.emails
-            .filter((email) => !email.id) // Créer de nouveaux e-mails sans id
-            .map((email) => ({
-              email: email.email,
-              type: email.type,
-            })),
-        };
-      }
 
       // Mettre à jour l'adresse si elle est fournie
       if (updateStructureDto.address) {
@@ -269,8 +206,6 @@ export class StructureService {
         where: { id },
         data: updateData,
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },

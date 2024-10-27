@@ -6,10 +6,9 @@ import {
   IsOptional,
   IsArray,
   IsNumber,
+  IsEmail,
 } from 'class-validator';
 import { CreateAddressDto } from 'src/address/dto/create-address.dto';
-import { EmailDto } from 'src/shared/dto/email.dto';
-import { PhoneDto } from 'src/shared/dto/phone.dto';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 export class CreateStructureDto {
   @IsNumber()
@@ -35,23 +34,21 @@ export class CreateStructureDto {
   @ApiProperty({ required: false, nullable: true })
   service?: string;
 
-  @IsArray()
-  @IsOptional()
+  @IsEmail()
+  @IsNotEmpty()
   @ApiProperty({
-    type: [EmailDto],
-    required: false,
-    nullable: true,
+    required: true,
+    nullable: false,
   })
-  emails: EmailDto[];
+  email: string;
 
-  @IsArray()
-  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   @ApiProperty({
-    type: [PhoneDto],
     required: false,
     nullable: true,
   })
-  phones: PhoneDto[];
+  phone: string;
 
   @ApiProperty({ required: true, nullable: false })
   address: CreateAddressDto;

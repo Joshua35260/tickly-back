@@ -43,7 +43,11 @@ export class AuthService {
   }
 
   private generateAccessToken(userId: number): string {
-    return this.jwtService.sign({ userId: userId });
+    const expirationTime = process.env.JWT_EXPIRATION_TIME || '1d'; // Valeur par défaut si non définie
+    return this.jwtService.sign(
+      { userId: userId },
+      { expiresIn: expirationTime },
+    );
   }
 
   async getUserInfo(request: AuthenticatedRequest): Promise<AuthEntity> {

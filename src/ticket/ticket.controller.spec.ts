@@ -171,7 +171,6 @@ describe('TicketController (e2e)', () => {
           lastname: 'User',
           login: 'test.user@example.com',
           addressId: 1,
-          jobTypeId: 'FREELANCE',
           address: {
             id: 1,
             country: 'France',
@@ -181,10 +180,6 @@ describe('TicketController (e2e)', () => {
             streetL2: 'Suite 604',
             longitude: '7.7521',
             latitude: '48.5734',
-          },
-          jobType: {
-            id: 'FREELANCE',
-            jobType: 'Freelance',
           },
         },
       };

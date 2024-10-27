@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Address, Email, Phone, Structure } from '@prisma/client';
+import { Address, Structure } from '@prisma/client';
 import {
   IsNumber,
   IsString,
   IsNotEmpty,
   MaxLength,
   IsOptional,
-  IsArray,
+  IsEmail,
 } from 'class-validator';
 export class StructureEntity implements Structure {
   @IsNumber()
@@ -31,15 +31,13 @@ export class StructureEntity implements Structure {
   @ApiProperty({ required: false, nullable: true })
   service: string;
 
-  @IsArray()
-  @IsOptional()
-  @ApiProperty({ required: false, nullable: true })
-  emails: Email[];
+  @IsEmail()
+  @ApiProperty({ required: true, nullable: false })
+  email: string;
 
-  @IsArray()
-  @IsOptional()
+  @IsString()
   @ApiProperty({ required: false, nullable: true })
-  phones: Phone[];
+  phone: string;
 
   @ApiProperty({ required: true, nullable: false })
   addressId: number;

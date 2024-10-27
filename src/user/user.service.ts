@@ -66,12 +66,8 @@ export class UserService {
           lastname: createUserDto.lastname,
           login: createUserDto.login,
           password: createUserDto.password,
-          phones: {
-            create: createUserDto.phones || [],
-          },
-          emails: {
-            create: createUserDto.emails || [],
-          },
+          email: createUserDto.email,
+          phone: createUserDto.phone,
           roles: {
             connectOrCreate: {
               where: { role: defaultRole },
@@ -79,16 +75,10 @@ export class UserService {
             },
           },
           address: addressInput,
-          jobType: {
-            connect: { jobType: createUserDto.jobType },
-          },
         },
         include: {
-          phones: true,
-          emails: true,
           roles: true,
           address: true,
-          jobType: true,
         },
         omit: { password: true },
       });
@@ -126,26 +116,16 @@ export class UserService {
       lastname: filters?.lastname
         ? { contains: filters.lastname, mode: 'insensitive' }
         : undefined,
-      jobType: filters?.jobType
-        ? { is: { jobType: filters.jobType } } // is pour comparer directement la chaîne
+      phone: filters?.phone
+        ? { contains: filters.phone, mode: 'insensitive' } // Recherche partielle insensible à la casse
+        : undefined,
+      email: filters?.email
+        ? { contains: filters.email, mode: 'insensitive' } // Recherche partielle insensible à la casse
         : undefined,
       roles: filters?.roles
         ? { some: { role: { equals: filters.roles, mode: 'insensitive' } } } // Vérifie si l'utilisateur a l'un des rôles spécifiés
         : undefined,
-      emails: filters?.emails
-        ? {
-            some: {
-              email: { equals: filters.emails }, // Compare directement la chaîne
-            },
-          }
-        : undefined,
-      phones: filters?.phones
-        ? {
-            some: {
-              phone: { equals: filters.phones }, // Compare directement la chaîne
-            },
-          }
-        : undefined,
+
       address: filters?.address
         ? { streetL1: { contains: filters.address, mode: 'insensitive' } }
         : undefined,
@@ -163,8 +143,6 @@ export class UserService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          phones: true,
-          emails: true,
           roles: true,
           address: true,
           structures: true,
@@ -199,11 +177,8 @@ export class UserService {
       const existingUser = (await prisma.user.findUnique({
         where: { id },
         include: {
-          phones: true,
-          emails: true,
           roles: true,
           address: true,
-          jobType: true,
         },
       })) as UserEntity;
 
@@ -218,51 +193,10 @@ export class UserService {
         );
       }
 
-      const { phones, emails, roles, address, jobType, ...userData } =
-        updateUserDto;
+      const { roles, address, ...userData } = updateUserDto;
 
       const updateData: any = {
         ...userData,
-        phones:
-          phones?.length > 0
-            ? {
-                update: phones
-                  .filter((phone) => phone.id)
-                  .map((phone) => ({
-                    where: { id: phone.id },
-                    data: {
-                      phone: phone.phone,
-                      type: phone.type,
-                    },
-                  })),
-                create: phones
-                  .filter((phone) => !phone.id)
-                  .map((phone) => ({
-                    phone: phone.phone,
-                    type: phone.type,
-                  })),
-              }
-            : undefined,
-        emails:
-          emails?.length > 0
-            ? {
-                update: emails
-                  .filter((email) => email.id)
-                  .map((email) => ({
-                    where: { id: email.id },
-                    data: {
-                      email: email.email,
-                      type: email.type,
-                    },
-                  })),
-                create: emails
-                  .filter((email) => !email.id)
-                  .map((email) => ({
-                    email: email.email,
-                    type: email.type,
-                  })),
-              }
-            : undefined,
         roles:
           roles?.length > 0
             ? {
@@ -290,18 +224,14 @@ export class UserService {
                 },
               }
           : undefined,
-        jobType: jobType ? { connect: { jobType } } : undefined,
       };
 
       const updatedUser = await prisma.user.update({
         where: { id },
         data: updateData,
         include: {
-          phones: true,
-          emails: true,
           roles: true,
           address: true,
-          jobType: true,
         },
         omit: { password: true },
       });
@@ -341,8 +271,6 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        phones: true,
-        emails: true,
         roles: true,
         address: true,
         structures: true,
