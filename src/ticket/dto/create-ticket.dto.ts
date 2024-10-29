@@ -1,12 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   IsNumber,
   IsNotEmpty,
   IsString,
   MaxLength,
   IsArray,
-  ValidateNested,
   IsOptional,
 } from 'class-validator';
 
@@ -61,22 +59,24 @@ export class CreateTicketDto {
   archivedAt?: Date;
 
   @IsNotEmpty()
-  @ApiProperty({ nullable: false, example: { id: 1, status: 'DOING' } }) // Exemple d'objet statut
-  status: StatusDto;
+  @IsNotEmpty()
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: false,
+  })
+  status: string;
 
   @IsNotEmpty()
+  @IsNotEmpty()
+  @MaxLength(50)
   @ApiProperty({
     nullable: false,
-    example: { id: 1, priority: 'LOW' }, // Exemple d'objet priorité
   })
-  priority: PriorityDto;
+  priority: string;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CategoryDto)
   @ApiProperty({
     nullable: false,
-    example: [{ id: 1, category: 'SUPPORT' }], // Exemple d'un tableau de catégories
   })
-  category: CategoryDto[];
+  category: string[];
 }

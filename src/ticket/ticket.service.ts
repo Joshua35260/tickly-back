@@ -33,25 +33,14 @@ export class TicketService {
       const newTicket = await prisma.ticket.create({
         data: {
           description: createTicketDto.description,
-          priority: {
-            connect: { id: createTicketDto.priority.id },
-          },
-          status: {
-            connect: { id: createTicketDto.status.id },
-          },
-          category: {
-            connect: createTicketDto.category.map((category) => ({
-              id: category.id,
-            })),
-          },
+          priority: createTicketDto.priority,
+          status: createTicketDto.status,
+          category: createTicketDto.category,
           author: {
             connect: { id: user.id },
           },
         },
         include: {
-          category: true,
-          priority: true,
-          status: true,
           author: {
             omit: { password: true },
           },
@@ -86,11 +75,6 @@ export class TicketService {
     return await this.prisma.$transaction(async (prisma) => {
       const existingTicket = await prisma.ticket.findUnique({
         where: { id },
-        include: {
-          category: true, // Inclut les catégories existantes
-          priority: true,
-          status: true,
-        },
       });
 
       if (!existingTicket) {
@@ -100,36 +84,16 @@ export class TicketService {
       // Préparer les données pour la mise à jour
       const updateData: any = {
         description: updateTicketDto.description,
+        priority: updateTicketDto.priority,
+        status: updateTicketDto.status,
+        category: updateTicketDto.category,
       };
-
-      if (updateTicketDto.priority?.id) {
-        updateData.priority = {
-          connect: { id: updateTicketDto.priority.id },
-        };
-      }
-
-      if (updateTicketDto.status?.id) {
-        updateData.status = {
-          connect: { id: updateTicketDto.status.id },
-        };
-      }
-
-      if (updateTicketDto.category) {
-        updateData.category = {
-          set: updateTicketDto.category.map((category) => ({
-            id: category.id, // Connexion avec les catégories
-          })),
-        };
-      }
 
       // Mettre à jour le ticket
       const updatedTicket = await prisma.ticket.update({
         where: { id },
         data: updateData,
         include: {
-          category: true, // Inclure les catégories mises à jour
-          priority: true,
-          status: true,
           author: {
             omit: { password: true },
           },
@@ -178,19 +142,18 @@ export class TicketService {
     // Construire directement le "where" Prisma à partir des filtres venant des query params
     const where: Prisma.TicketWhereInput = {
       id: filters?.id ? Number(filters.id) : undefined,
-      status: filters?.status
-        ? { status: { equals: filters.status, mode: 'insensitive' } } // On utilise `status.status` pour le comparer à une chaîne
+      status: filters?.status // Utiliser directement le champ status comme chaîne
+        ? { equals: filters.status, mode: 'insensitive' }
         : undefined,
-      priority: filters?.priority
-        ? { priority: { equals: filters.priority, mode: 'insensitive' } } // On utilise `priority.priority` pour comparer à une chaîne
+      priority: filters?.priority // Utiliser directement le champ priority comme chaîne
+        ? { equals: filters.priority, mode: 'insensitive' }
         : undefined,
-      category: filters?.category
-        ? {
-            some: {
-              category: { equals: filters.category, mode: 'insensitive' }, // Compare directement la chaîne
-            },
-          }
-        : undefined,
+      category:
+        filters?.category && filters.category.length > 0
+          ? {
+              has: filters.category, // `hasSome` pour vérifier si le tableau contient un des éléments
+            }
+          : undefined,
       author: filters?.author
         ? {
             OR: [
@@ -208,9 +171,6 @@ export class TicketService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          category: true,
-          priority: true,
-          status: true,
           author: {
             omit: { password: true },
             include: {
@@ -241,9 +201,6 @@ export class TicketService {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id },
       include: {
-        category: true,
-        priority: true,
-        status: true,
         author: {
           omit: { password: true },
           include: {

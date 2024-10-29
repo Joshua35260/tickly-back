@@ -6,7 +6,6 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { StatusDto, PriorityDto, CategoryDto } from '../dto/create-ticket.dto';
 
 export class TicketEntity {
   @IsNumber()
@@ -34,19 +33,25 @@ export class TicketEntity {
   @ApiProperty({ required: false })
   archivedAt: Date;
 
-  @IsString()
+  @IsNotEmpty()
   @IsNotEmpty()
   @MaxLength(50)
-  @ApiProperty({ nullable: false })
-  status: StatusDto;
+  @ApiProperty({
+    nullable: false,
+  })
+  status: string;
 
-  @IsString()
   @IsNotEmpty()
-  @ApiProperty({ nullable: false })
-  priority: PriorityDto;
+  @IsNotEmpty()
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: false,
+  })
+  priority: string;
 
   @IsArray()
-  @IsNotEmpty()
-  @ApiProperty({ nullable: false })
-  category: CategoryDto[];
+  @ApiProperty({
+    nullable: false,
+  })
+  category: string[];
 }
