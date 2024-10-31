@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE "Email" ALTER COLUMN "type" DROP NOT NULL;
-
--- AlterTable
-ALTER TABLE "Phone" ALTER COLUMN "type" DROP NOT NULL;

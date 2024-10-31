@@ -18,6 +18,12 @@ export class TicketEntity {
   @ApiProperty({ nullable: false })
   author: string;
 
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: true,
+  })
+  title: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
@@ -34,14 +40,12 @@ export class TicketEntity {
   archivedAt: Date;
 
   @IsNotEmpty()
-  @IsNotEmpty()
   @MaxLength(50)
   @ApiProperty({
     nullable: false,
   })
   status: string;
 
-  @IsNotEmpty()
   @IsNotEmpty()
   @MaxLength(50)
   @ApiProperty({

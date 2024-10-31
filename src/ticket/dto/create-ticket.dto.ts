@@ -49,6 +49,12 @@ export class CreateTicketDto {
   @ApiProperty({ required: true, nullable: false }) // Exemple d'objet statut
   authorId: number;
 
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: true,
+  })
+  title: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
@@ -59,14 +65,12 @@ export class CreateTicketDto {
   archivedAt?: Date;
 
   @IsNotEmpty()
-  @IsNotEmpty()
   @MaxLength(50)
   @ApiProperty({
     nullable: false,
   })
   status: string;
 
-  @IsNotEmpty()
   @IsNotEmpty()
   @MaxLength(50)
   @ApiProperty({

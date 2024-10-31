@@ -13,6 +13,14 @@ export class FilterTicketDto {
   @IsOptional()
   @ApiProperty({
     required: false,
+    description: 'Filter by ticket title',
+    type: String,
+  })
+  title?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    required: false,
     description: 'Filter by ticket status',
     type: String,
   })

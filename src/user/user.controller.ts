@@ -36,7 +36,7 @@ export class UserController {
   @ApiCreatedResponse({ type: UserEntity })
   create(
     @Body() createUserDto: CreateUserDto,
-    @Req() request: AuthenticatedRequest,
+    @Req() request?: AuthenticatedRequest,
   ) {
     return this.userService.create(createUserDto, request);
   }

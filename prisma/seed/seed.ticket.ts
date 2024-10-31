@@ -4,10 +4,10 @@ import { faker } from '@faker-js/faker';
 async function seedTicket(prisma: PrismaClient) {
   const tickets: Ticket[] = [];
 
-  // Récupérer les catégories, priorités et statuts existants
-  const categories = await prisma.category.findMany();
-  const priorities = await prisma.priority.findMany();
-  const statuses = await prisma.status.findMany();
+  const categories = ['SUPPORT', 'FEATURE_REQUEST'];
+  const priorities = ['LOW', 'MEDIUM', 'HIGH'];
+  const statuses = ['OPEN', 'IN_PROGRESS', 'CLOSED'];
+
   const users = await prisma.user.findMany(); // Récupérer les utilisateurs pour assigner les auteurs des tickets
 
   if (
@@ -22,8 +22,9 @@ async function seedTicket(prisma: PrismaClient) {
   }
 
   for (let i = 0; i < 1000; i++) {
-    const randomCategory =
-      categories[Math.floor(Math.random() * categories.length)];
+    const randomCategories = [
+      categories[Math.floor(Math.random() * categories.length)],
+    ]; // Picks one random category from the array
     const randomPriority =
       priorities[Math.floor(Math.random() * priorities.length)];
     const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
@@ -31,19 +32,13 @@ async function seedTicket(prisma: PrismaClient) {
 
     const ticket: Ticket = await prisma.ticket.create({
       data: {
-        description: faker.lorem.sentence(10), // Générer une description aléatoire
-        archivedAt: Math.random() > 0.9 ? faker.date.past() : null, // 10% de chances d'avoir un ticket archivé
-        status: {
-          connect: { id: randomStatus.id }, // Associer à un statut aléatoire
-        },
-        priority: {
-          connect: { id: randomPriority.id }, // Associer à une priorité aléatoire
-        },
-        category: {
-          connect: { id: randomCategory.id }, // Associer à une catégorie aléatoire
-        },
+        description: faker.lorem.sentence(10), // Generate a random description
+        archivedAt: Math.random() > 0.9 ? faker.date.past() : null, // 10% chance of being archived
+        status: randomStatus, // Assign a random status as a string
+        priority: randomPriority, // Assign a random priority as a string
+        category: randomCategories, // Assign a random category as an array of strings
         author: {
-          connect: { id: randomUser.id }, // Associer à un utilisateur (auteur) aléatoire
+          connect: { id: randomUser.id }, // Connect to a random user as author
         },
       },
     });

@@ -9,9 +9,21 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const isProduction = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: isProduction ? 'https://tickly.cloud' : 'http://localhost:4200',
+    origin: (origin, callback) => {
+      const allowedOrigins = isProduction
+        ? ['https://tickly.cloud', 'http://localhost:4200']
+        : ['http://localhost:4200'];
+
+      // Vérifiez si l'origine est dans la liste des origines autorisées
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true); // Autoriser l'origine
+      } else {
+        callback(new Error('Not allowed by CORS')); // Refuser l'origine
+      }
+    },
     credentials: true, // Autoriser les cookies
   });
+
   app.setGlobalPrefix('api'); // Définir le préfixe global pour toutes les routes
   app.use(cookieParser()); // cookie parser middleware
   app.useGlobalPipes(new ValidationPipe({ whitelist: true })); //whitelist true = supprime les champs non renseignés

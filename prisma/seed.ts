@@ -3,9 +3,6 @@ import { seedUser } from './seed/seed.user';
 import { seedAddress } from './seed/seed-address';
 import { seedStructure } from './seed/seed-structure';
 import { seedTicket } from './seed/seed.ticket';
-import { seedCategory } from './seed/seed.category';
-import { seedPriority } from './seed/seed.priority';
-import { seedStatus } from './seed/seed.status';
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
@@ -15,9 +12,6 @@ async function main() {
     const existingAddressesCount = await prisma.address.count();
     const existingStructuresCount = await prisma.structure.count();
     const existingUsersCount = await prisma.user.count();
-    const existingCategoriesCount = await prisma.category.count();
-    const existingPrioritiesCount = await prisma.priority.count();
-    const existingStatusesCount = await prisma.status.count();
     const existingTicketsCount = await prisma.ticket.count();
     if (existingAddressesCount >= 4000) {
       console.log(
@@ -51,36 +45,6 @@ async function main() {
     } else {
       await seedUser(prisma);
       console.log('Seed des utilisateurs terminé.');
-    }
-
-    console.log('Seed completed successfully.');
-    if (existingCategoriesCount === 0) {
-      await seedCategory(prisma);
-      console.log('Seed des catégories terminé.');
-    } else {
-      console.log(
-        "Les catégories sont déjà peuplées, le seed n'est pas nécessaire.",
-      );
-    }
-
-    // Seed des priorités
-    if (existingPrioritiesCount === 0) {
-      await seedPriority(prisma);
-      console.log('Seed des priorités terminé.');
-    } else {
-      console.log(
-        "Les priorités sont déjà peuplées, le seed n'est pas nécessaire.",
-      );
-    }
-
-    // Seed des statuts
-    if (existingStatusesCount === 0) {
-      await seedStatus(prisma);
-      console.log('Seed des statuts terminé.');
-    } else {
-      console.log(
-        "Les statuts sont déjà peuplés, le seed n'est pas nécessaire.",
-      );
     }
     if (existingTicketsCount >= 1000) {
       console.log(

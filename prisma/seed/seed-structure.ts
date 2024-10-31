@@ -61,22 +61,8 @@ async function seedStructure(prisma: PrismaClient) {
         name: faker.company.name(),
         type: types[Math.floor(Math.random() * types.length)],
         service: services[Math.floor(Math.random() * services.length)], // Sélectionne un service aléatoire
-        emails: {
-          create: [
-            {
-              email: faker.internet.email(),
-              type: 'work',
-            },
-          ],
-        },
-        phones: {
-          create: [
-            {
-              phone: phoneNumber,
-              type: 'mobile', // ou un autre type selon votre logique
-            },
-          ],
-        },
+        email: faker.internet.email(), // Générer un email aléatoire
+        phone: phoneNumber, // Attribuer le numéro de téléphone généré
         address: { connect: { id: randomAddress.id } },
       },
     });

@@ -39,7 +39,6 @@ export class UserDto {
   email: string;
 
   @IsString()
-  @IsNotEmpty()
   @ApiProperty({
     required: false,
     nullable: true,

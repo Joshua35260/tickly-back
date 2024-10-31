@@ -88,4 +88,28 @@ export class TicketController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ticketService.remove(id);
   }
+
+  @Post(':ticketId/assign-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity })
+  async assignUser(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Body('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.ticketService.addUserToTicket(ticketId, userId, request);
+  }
+
+  @Post(':ticketId/remove-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity })
+  async unassignUser(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Body('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.ticketService.removeUserFromTicket(ticketId, userId, request);
+  }
 }

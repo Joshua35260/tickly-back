@@ -26,15 +26,12 @@ export class UserService {
 
   async create(
     createUserDto: CreateUserDto,
-    request: AuthenticatedRequest, // Ajouter la requête authentifiée
+    request?: AuthenticatedRequest, // request est optionnel
   ): Promise<Omit<User, 'password'>> {
-    const user = request.user;
+    // Utilisez l'utilisateur authentifié s'il est présent
+    const user = request?.user;
 
-    if (!user) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-
-    // Hash password if provided
+    // Vérifiez si le mot de passe est fourni, puis le hachez
     if (createUserDto.password) {
       createUserDto.password = await bcrypt.hash(
         createUserDto.password,
@@ -44,22 +41,24 @@ export class UserService {
 
     const defaultRole = RoleType.CLIENT;
 
-    // Créez l'entrée d'adresse
-    const addressInput = {
-      create: {
-        country: createUserDto.address.country,
-        city: createUserDto.address.city,
-        streetL1: createUserDto.address.streetL1,
-        streetL2: createUserDto.address.streetL2,
-        postcode: createUserDto.address.postcode,
-        latitude: createUserDto.address.latitude,
-        longitude: createUserDto.address.longitude,
-      },
-    };
+    // Préparez l'entrée d'adresse
+    const addressInput = createUserDto.address
+      ? {
+          create: {
+            country: createUserDto.address.country,
+            city: createUserDto.address.city,
+            streetL1: createUserDto.address.streetL1,
+            streetL2: createUserDto.address.streetL2,
+            postcode: createUserDto.address.postcode,
+            latitude: createUserDto.address.latitude,
+            longitude: createUserDto.address.longitude,
+          },
+        }
+      : undefined;
 
     // Transaction pour créer l'utilisateur et l'audit
     return await this.prisma.$transaction(async (prisma) => {
-      // Tentative de création de l'utilisateur
+      // Créez l'utilisateur
       const newUser = await prisma.user.create({
         data: {
           firstname: createUserDto.firstname,
@@ -80,19 +79,21 @@ export class UserService {
           roles: true,
           address: true,
         },
-        omit: { password: true },
       });
 
-      // Log de l'audit pour la création de l'utilisateur
-      await this.auditLogService.createAuditLog(
-        user.id, // Utilisateur actuel
-        newUser.id, // ID de l'utilisateur créé
-        'User', // Table liée
-        'CREATE', // Action de création
-        [], // Aucun champ modifié pour une création
-      );
+      // Créer un log d'audit si un utilisateur est connecté
+      if (user) {
+        await this.auditLogService.createAuditLog(
+          user.id, // Utilisateur actuel
+          newUser.id, // ID de l'utilisateur créé
+          'User', // Table liée
+          'CREATE', // Action de création
+          [], // Aucun champ modifié pour une création
+        );
+      }
 
-      return newUser; // Retourner l'utilisateur nouvellement créé, sans mot de passe
+      // Retourner l'utilisateur nouvellement créé, sans mot de passe
+      return newUser;
     });
   }
 

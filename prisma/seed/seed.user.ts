@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import { PrismaClient, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { RoleType } from '../../src/shared/enum/role.enum'; // Assurez-vous que ce chemin est correct
-import { JobType } from '../../src/shared/enum/job-type.enum';
 
 const roundsOfHashing = 10;
 
@@ -41,26 +40,8 @@ async function seedUser(prisma: PrismaClient) {
     }),
   ]);
 
-  const jobTypes = await Promise.all([
-    prisma.jobType.upsert({
-      where: { jobType: JobType.FREELANCE },
-      update: {},
-      create: { jobType: JobType.FREELANCE },
-    }),
-    prisma.jobType.upsert({
-      where: { jobType: JobType.EMPLOYEE },
-      update: {},
-      create: { jobType: JobType.EMPLOYEE },
-    }),
-    prisma.jobType.upsert({
-      where: { jobType: JobType.CONSUMER },
-      update: {},
-      create: { jobType: JobType.CONSUMER },
-    }),
-  ]);
-
   const addresses = await prisma.address.findMany();
-
+  const phoneNumber = generateFrenchPhoneNumber();
   // Créez un utilisateur spécifique avec un mot de passe défini
   const hashedPassword = await bcrypt.hash('test', roundsOfHashing);
 
@@ -75,15 +56,8 @@ async function seedUser(prisma: PrismaClient) {
           .filter((role) => role.role === RoleType.SUPPORT)
           .map((role) => ({ role: role.role })),
       },
-      phones: {
-        create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
-      },
-      emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
-      jobType: {
-        connect: {
-          jobType: JobType.FREELANCE,
-        },
-      },
+      email: faker.internet.email(), // Générer un email aléatoire
+      phone: phoneNumber, // Attribuer le numéro de téléphone généré
       address: {
         connect: {
           id: addresses[Math.floor(Math.random() * addresses.length)].id,
@@ -100,8 +74,6 @@ async function seedUser(prisma: PrismaClient) {
       roundsOfHashing,
     );
 
-    const userJobType = jobTypes[Math.floor(Math.random() * jobTypes.length)];
-
     const user: User = await prisma.user.create({
       data: {
         login: await generateUniqueEmail(prisma),
@@ -113,15 +85,8 @@ async function seedUser(prisma: PrismaClient) {
             .filter((role) => role.role === RoleType.CLIENT)
             .map((role) => ({ role: role.role })),
         },
-        phones: {
-          create: [{ phone: generateFrenchPhoneNumber(), type: 'mobile' }],
-        },
-        emails: { create: [{ email: faker.internet.email(), type: 'work' }] },
-        jobType: {
-          connect: {
-            jobType: userJobType.jobType, // Assurez-vous que cela correspond à la structure attendue
-          },
-        },
+        email: faker.internet.email(), // Générer un email aléatoire
+        phone: phoneNumber, // Attribuer le numéro de téléphone généré
         address: {
           connect: {
             id: addresses[Math.floor(Math.random() * addresses.length)].id,
@@ -131,19 +96,18 @@ async function seedUser(prisma: PrismaClient) {
     });
 
     // Si l'utilisateur est EMPLOYEE, on le connecte à une structure
-    if (userJobType.jobType === JobType.EMPLOYEE) {
-      const structureCount = await prisma.structure.count();
-      if (structureCount > 0) {
-        const randomStructure = await prisma.structure.findFirst({
-          skip: Math.floor(Math.random() * structureCount),
-        });
 
-        if (randomStructure) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { structures: { connect: { id: randomStructure.id } } },
-          });
-        }
+    const structureCount = await prisma.structure.count();
+    if (structureCount > 0) {
+      const randomStructure = await prisma.structure.findFirst({
+        skip: Math.floor(Math.random() * structureCount),
+      });
+
+      if (randomStructure) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { structures: { connect: { id: randomStructure.id } } },
+        });
       }
     }
 

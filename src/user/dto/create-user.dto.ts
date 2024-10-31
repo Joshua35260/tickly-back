@@ -52,7 +52,6 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  @IsNotEmpty()
   @ApiProperty({
     required: false,
     nullable: true,

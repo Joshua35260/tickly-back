@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -84,6 +85,7 @@ export class TicketService {
       // Préparer les données pour la mise à jour
       const updateData: any = {
         description: updateTicketDto.description,
+        title: updateTicketDto.title,
         priority: updateTicketDto.priority,
         status: updateTicketDto.status,
         category: updateTicketDto.category,
@@ -212,13 +214,130 @@ export class TicketService {
             },
           },
         },
+        assignedUsers: {
+          // Ajoutez cette ligne pour inclure les utilisateurs assignés
+          include: {
+            address: true, // Inclure d'autres relations si nécessaire, par exemple, l'adresse
+          },
+        },
       },
     });
+
     if (!ticket) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
     return ticket;
+  }
+
+  async addUserToTicket(
+    ticketId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Ticket> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Commencez une transaction pour l'ajout de l'utilisateur
+    return await this.prisma.$transaction(async (prisma) => {
+      const existingTicket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: { assignedUsers: true }, // Inclure les utilisateurs assignés pour vérifier l'existence
+      });
+
+      if (!existingTicket) {
+        throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
+      }
+
+      // Assurez-vous que l'utilisateur n'est pas déjà assigné
+      if (existingTicket.assignedUsers.some((user) => user.id === userId)) {
+        throw new ConflictException('User is already assigned to this ticket');
+      }
+
+      // Mettre à jour le ticket pour ajouter l'utilisateur
+      const updatedTicket = await prisma.ticket.update({
+        where: { id: ticketId },
+        data: {
+          assignedUsers: {
+            connect: { id: userId }, // Connectez l'utilisateur par ID
+          },
+        },
+        include: {
+          assignedUsers: true, // Inclure les utilisateurs assignés dans la réponse
+        },
+      });
+
+      // Enregistrer l'audit pour l'ajout d'un utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id, // Utilisateur actuel
+        updatedTicket.id, // ID du ticket
+        'Ticket',
+        'ASSIGN_USER', // Action d'assignation
+        [{ field: 'assignedUsers', newValue: userId.toString() }], // Champ modifié
+      );
+
+      return updatedTicket;
+    });
+  }
+
+  async removeUserFromTicket(
+    ticketId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Ticket> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return await this.prisma.$transaction(async (prisma) => {
+      const existingTicket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: { assignedUsers: true }, // Inclure les utilisateurs assignés pour vérifier l'existence
+      });
+
+      if (!existingTicket) {
+        throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
+      }
+
+      // Vérifiez si l'utilisateur est effectivement assigné au ticket
+      const isAssigned = existingTicket.assignedUsers.some(
+        (assignedUser) => assignedUser.id === userId,
+      );
+
+      // Désassigner l'utilisateur si effectivement assigné
+      if (isAssigned) {
+        const updatedTicket = await prisma.ticket.update({
+          where: { id: ticketId },
+          data: {
+            assignedUsers: {
+              disconnect: { id: userId }, // Deconnectez l'utilisateur par ID
+            },
+          },
+          include: {
+            assignedUsers: true, // Inclure les utilisateurs assignés dans la réponse
+          },
+        });
+
+        // Enregistrez l'audit pour la désassignation
+        await this.auditLogService.createAuditLog(
+          user.id, // Utilisateur actuel
+          updatedTicket.id, // ID du ticket
+          'Ticket',
+          'UNASSIGN_USER', // Action de désassignation
+          [{ field: 'assignedUsers', newValue: userId.toString() }], // Champ modifié
+        );
+
+        return updatedTicket;
+      } else {
+        // Si l'utilisateur n'est pas assigné, retourner le ticket sans changement
+        return existingTicket;
+      }
+    });
   }
 
   async remove(id: number): Promise<Ticket | null> {

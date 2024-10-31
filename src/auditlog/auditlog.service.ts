@@ -12,7 +12,7 @@ export class AuditLogService {
     action: string,
     modifiedFields?: {
       field: string;
-      previousValue: string;
+      previousValue?: string | null;
       newValue: string;
     }[],
   ) {
@@ -37,7 +37,7 @@ export class AuditLogService {
           data: {
             auditLogId: auditLog.id,
             field: field.field,
-            previousValue: field.previousValue,
+            previousValue: field.previousValue || null,
             newValue: field.newValue,
           },
         });

@@ -47,6 +47,7 @@ export class UserEntity implements User {
   roles: Role[];
 
   @IsEmail()
+  @IsNotEmpty()
   @ApiProperty({ required: true, nullable: false })
   email: string;
 
