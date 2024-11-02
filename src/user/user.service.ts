@@ -14,6 +14,7 @@ import { AuthenticatedRequest } from 'src/auth/auth.service';
 import { AuditLogService } from 'src/auditlog/auditlog.service';
 import { UserEntity } from './entities/user.entity';
 import { PrismaService } from 'prisma/prisma.service';
+import { LinkedTable } from 'src/shared/enum/linked-table.enum';
 
 export const roundsOfHashing = 10;
 
@@ -86,7 +87,7 @@ export class UserService {
         await this.auditLogService.createAuditLog(
           user.id, // Utilisateur actuel
           newUser.id, // ID de l'utilisateur créé
-          'User', // Table liée
+          LinkedTable.USER,
           'CREATE', // Action de création
           [], // Aucun champ modifié pour une création
         );
@@ -259,7 +260,7 @@ export class UserService {
       await this.auditLogService.createAuditLog(
         user.id,
         updatedUser.id,
-        'User',
+        LinkedTable.USER,
         'UPDATE',
         modifiedFields,
       );
@@ -328,7 +329,7 @@ export class UserService {
       await this.auditLogService.createAuditLog(
         user.id,
         userId,
-        'User',
+        LinkedTable.USER,
         'ADD_STRUCTURE',
         [
           {
@@ -374,7 +375,7 @@ export class UserService {
       await this.auditLogService.createAuditLog(
         user.id,
         userId,
-        'User',
+        LinkedTable.USER,
         'REMOVE_STRUCTURE',
         [
           {

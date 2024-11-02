@@ -12,7 +12,7 @@ async function bootstrap() {
     origin: (origin, callback) => {
       const allowedOrigins = isProduction
         ? ['https://tickly.cloud', 'http://localhost:4200']
-        : ['http://localhost:4200'];
+        : ['http://localhost:4200', 'http://localhost:3000'];
 
       // Vérifiez si l'origine est dans la liste des origines autorisées
       if (!origin || allowedOrigins.includes(origin)) {

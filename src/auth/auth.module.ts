@@ -17,10 +17,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule], // Importez ConfigModule pour utiliser ConfigService
       inject: [ConfigService], // Injectez ConfigService
       useFactory: async (configService: ConfigService) => ({
-        // Utilisez ConfigService pour obtenir la clé secrète
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION_TIME'),
+          expiresIn:
+            configService.get<string>('JWT_EXPIRATION_TIME') || '86400', // 86400s = 1 jour en secondes
         },
       }),
     }),

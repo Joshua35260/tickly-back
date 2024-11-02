@@ -11,6 +11,7 @@ import { PaginationDto } from 'src/shared/dto/pagination.dto';
 import { AuditLogService } from 'src/auditlog/auditlog.service';
 import { AuthenticatedRequest } from 'src/auth/auth.service';
 import { FilterStructureDto } from './dto/filter-structure.dto';
+import { LinkedTable } from 'src/shared/enum/linked-table.enum';
 
 @Injectable()
 export class StructureService {
@@ -61,7 +62,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id, // Utilisateur actuel
         newStructure.id, // ID de la structure créée
-        'Structure', // Table liée
+        LinkedTable.STRUCTURE,
         'CREATE', // Action de création
         [], // Aucun champ modifié pour une création
       );
@@ -232,7 +233,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id,
         updatedStructure.id,
-        'Structure',
+        LinkedTable.STRUCTURE,
         'UPDATE',
         modifiedFields,
       );
@@ -279,7 +280,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id,
         structureId,
-        'Structure',
+        LinkedTable.STRUCTURE,
         'ADD_USER',
         [{ field: 'users', previousValue: '', newValue: userId.toString() }],
       );
@@ -319,7 +320,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id,
         structureId,
-        'Structure',
+        LinkedTable.STRUCTURE,
         'REMOVE_USER',
         [{ field: 'users', previousValue: userId.toString(), newValue: '' }],
       );

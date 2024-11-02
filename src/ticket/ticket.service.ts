@@ -12,6 +12,7 @@ import { PaginationDto } from '../../src/shared/dto/pagination.dto';
 import { AuthenticatedRequest } from '../../src/auth/auth.service';
 import { AuditLogService } from '../auditlog/auditlog.service';
 import { FilterTicketDto } from './dto/filter-ticket.dto';
+import { LinkedTable } from 'src/shared/enum/linked-table.enum';
 
 @Injectable()
 export class TicketService {
@@ -53,7 +54,7 @@ export class TicketService {
       await this.auditLogService.createAuditLog(
         user.id, // Utilisateur actuel
         newTicket.id, // ID du ticket
-        'Ticket', // Table liée
+        LinkedTable.TICKET, // Table liée
         'CREATE', // Action de création
         [], // Aucun champ modifié pour une création
       );
@@ -87,6 +88,7 @@ export class TicketService {
         description: updateTicketDto.description,
         title: updateTicketDto.title,
         priority: updateTicketDto.priority,
+        archivedAt: updateTicketDto.archivedAt,
         status: updateTicketDto.status,
         category: updateTicketDto.category,
       };
@@ -105,23 +107,17 @@ export class TicketService {
       // Comparer les champs modifiés
       const modifiedFields = (
         Object.keys(updateTicketDto) as (keyof UpdateTicketDto)[]
-      )
-        .filter((key) => {
-          const oldValue = existingTicket[key];
-          const newValue = updateTicketDto[key];
-          return oldValue !== newValue; // Comparer les anciennes et nouvelles valeurs
-        })
-        .map((key) => ({
-          field: key as string,
-          previousValue: existingTicket[key]?.toString() || '',
-          newValue: updateTicketDto[key]?.toString() || '',
-        }));
+      ).map((key) => ({
+        field: key as string,
+        previousValue: existingTicket[key]?.toString() || '',
+        newValue: updateTicketDto[key]?.toString() || '',
+      }));
 
       // Enregistrer les logs d'audit
       await this.auditLogService.createAuditLog(
         user.id,
         updatedTicket.id,
-        'Ticket',
+        LinkedTable.TICKET,
         'UPDATE',
         modifiedFields,
       );
@@ -241,42 +237,65 @@ export class TicketService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Commencez une transaction pour l'ajout de l'utilisateur
     return await this.prisma.$transaction(async (prisma) => {
       const existingTicket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { assignedUsers: true }, // Inclure les utilisateurs assignés pour vérifier l'existence
+        include: { assignedUsers: true },
       });
 
       if (!existingTicket) {
         throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
       }
 
-      // Assurez-vous que l'utilisateur n'est pas déjà assigné
-      if (existingTicket.assignedUsers.some((user) => user.id === userId)) {
+      if (
+        existingTicket.assignedUsers.some(
+          (assignedUser) => assignedUser.id === userId,
+        )
+      ) {
         throw new ConflictException('User is already assigned to this ticket');
       }
 
-      // Mettre à jour le ticket pour ajouter l'utilisateur
+      // Capture les utilisateurs assignés avant l'ajout
+      const previousAssignedUsers = existingTicket.assignedUsers.map(
+        (assignedUser) => `${assignedUser.firstname} ${assignedUser.lastname}`,
+      );
+
       const updatedTicket = await prisma.ticket.update({
         where: { id: ticketId },
         data: {
           assignedUsers: {
-            connect: { id: userId }, // Connectez l'utilisateur par ID
+            connect: { id: userId },
           },
         },
-        include: {
-          assignedUsers: true, // Inclure les utilisateurs assignés dans la réponse
+        include: { assignedUsers: true },
+      });
+
+      // Récupérer les détails de l'utilisateur à ajouter
+      const newUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          firstname: true,
+          lastname: true,
         },
       });
 
+      if (!newUser) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
       // Enregistrer l'audit pour l'ajout d'un utilisateur
       await this.auditLogService.createAuditLog(
-        user.id, // Utilisateur actuel
-        updatedTicket.id, // ID du ticket
-        'Ticket',
-        'ASSIGN_USER', // Action d'assignation
-        [{ field: 'assignedUsers', newValue: userId.toString() }], // Champ modifié
+        user.id,
+        updatedTicket.id,
+        LinkedTable.TICKET,
+        'ASSIGN_USER',
+        [
+          {
+            field: 'assignedUsers',
+            previousValue: previousAssignedUsers.join(', '), // Liste des utilisateurs assignés précédents
+            newValue: `${newUser.firstname} ${newUser.lastname}`, // Nouveau utilisateur ajouté
+          },
+        ],
       );
 
       return updatedTicket;
@@ -297,44 +316,72 @@ export class TicketService {
     return await this.prisma.$transaction(async (prisma) => {
       const existingTicket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        include: { assignedUsers: true }, // Inclure les utilisateurs assignés pour vérifier l'existence
+        include: { assignedUsers: true },
       });
 
       if (!existingTicket) {
         throw new NotFoundException(`Ticket with ID ${ticketId} not found`);
       }
 
-      // Vérifiez si l'utilisateur est effectivement assigné au ticket
       const isAssigned = existingTicket.assignedUsers.some(
         (assignedUser) => assignedUser.id === userId,
       );
 
-      // Désassigner l'utilisateur si effectivement assigné
       if (isAssigned) {
+        // Capture les utilisateurs assignés avant la désassignation
+        const previousAssignedUsers = existingTicket.assignedUsers.map(
+          (assignedUser) =>
+            `${assignedUser.firstname} ${assignedUser.lastname}`,
+        );
+
         const updatedTicket = await prisma.ticket.update({
           where: { id: ticketId },
           data: {
             assignedUsers: {
-              disconnect: { id: userId }, // Deconnectez l'utilisateur par ID
+              disconnect: { id: userId },
             },
           },
-          include: {
-            assignedUsers: true, // Inclure les utilisateurs assignés dans la réponse
+          include: { assignedUsers: true },
+        });
+
+        // Récupérer les détails de l'utilisateur à désassigner
+        const removedUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            firstname: true,
+            lastname: true,
           },
         });
 
-        // Enregistrez l'audit pour la désassignation
+        if (!removedUser) {
+          throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        // Enregistrer l'audit pour la désassignation
+        const updatedAssignedUsers = updatedTicket.assignedUsers.map(
+          (assignedUser) =>
+            `${assignedUser.firstname} ${assignedUser.lastname}`,
+        );
+
         await this.auditLogService.createAuditLog(
-          user.id, // Utilisateur actuel
-          updatedTicket.id, // ID du ticket
-          'Ticket',
-          'UNASSIGN_USER', // Action de désassignation
-          [{ field: 'assignedUsers', newValue: userId.toString() }], // Champ modifié
+          user.id,
+          updatedTicket.id,
+          LinkedTable.TICKET,
+          'UNASSIGN_USER',
+          [
+            {
+              field: 'assignedUsers',
+              previousValue: previousAssignedUsers.join(', '), // Liste des utilisateurs assignés précédents
+              newValue:
+                updatedAssignedUsers.length > 0
+                  ? updatedAssignedUsers.join(', ')
+                  : 'null', // Afficher 'null' si aucune valeur
+            },
+          ],
         );
 
         return updatedTicket;
       } else {
-        // Si l'utilisateur n'est pas assigné, retourner le ticket sans changement
         return existingTicket;
       }
     });

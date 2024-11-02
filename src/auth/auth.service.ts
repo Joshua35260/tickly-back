@@ -43,7 +43,7 @@ export class AuthService {
   }
 
   private generateAccessToken(userId: number): string {
-    const expirationTime = process.env.JWT_EXPIRATION_TIME || '1d'; // Valeur par défaut si non définie
+    const expirationTime = process.env.JWT_EXPIRATION_TIME || '86400'; // 86400s = 1 jour en secondes
     return this.jwtService.sign(
       { userId: userId },
       { expiresIn: expirationTime },

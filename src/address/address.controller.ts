@@ -16,12 +16,14 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
 
 import { Address } from './entities/address.entity';
 
 @Controller('address')
+@ApiTags('address')
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
 
