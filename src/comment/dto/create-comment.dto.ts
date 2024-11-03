@@ -2,10 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString, IsNotEmpty, MaxLength } from 'class-validator';
 
 export class CreateCommentDto {
-  @IsNumber()
-  @ApiProperty({ description: 'Unique ID of the comment' })
-  id: number;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
