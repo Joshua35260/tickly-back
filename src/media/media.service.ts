@@ -52,8 +52,8 @@ export class MediaService {
       });
       const uploadsPath =
         this.configService.get<string>('UPLOADS_PATH') || 'uploads';
-
-      const mediaUrl = `/${uploadsPath}/${media.filename}`;
+      const normalizedUploadsPath = uploadsPath.replace(/^\/+/, ''); // Enlève tous les slashes en tête
+      const mediaUrl = `/${normalizedUploadsPath}/${media.filename}`;
 
       // Mettre à jour le média avec l'URL
       await prisma.media.update({
