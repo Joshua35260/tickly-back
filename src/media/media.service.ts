@@ -18,6 +18,20 @@ export class MediaService {
   ) {}
 
   async createMedia(createMediaDto: CreateMediaDto): Promise<Media> {
+    const uploadsPath =
+      this.configService.get<string>('UPLOADS_PATH') || 'uploads';
+
+    // Normalisation du chemin des uploads
+    const normalizedUploadsPath = uploadsPath
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, ''); // Enlève tous les slashes en tête et en fin
+    const fullUploadsPath = join(process.cwd(), normalizedUploadsPath);
+
+    // Vérifie si le dossier existe, sinon le crée
+    if (!fs.existsSync(fullUploadsPath)) {
+      fs.mkdirSync(fullUploadsPath, { recursive: true });
+    }
+
     const { filename, mimetype, userId, ticketId, structureId, commentId } =
       createMediaDto;
 
@@ -27,7 +41,7 @@ export class MediaService {
     }
 
     return await this.prisma.$transaction(async (prisma) => {
-      // Si un commentId est fourni, nous vérifions s'il y a déjà un média associé
+      // Si un commentId est fourni, vérifions s'il y a déjà un média associé
       let oldMedia: Media | null = null;
       if (commentId) {
         oldMedia = await prisma.media.findFirst({
@@ -50,9 +64,7 @@ export class MediaService {
           typemime: mimetype,
         },
       });
-      const uploadsPath =
-        this.configService.get<string>('UPLOADS_PATH') || 'uploads';
-      const normalizedUploadsPath = uploadsPath.replace(/^\/+/, ''); // Enlève tous les slashes en tête
+
       const mediaUrl = `/${normalizedUploadsPath}/${media.filename}`;
 
       // Mettre à jour le média avec l'URL
@@ -145,7 +157,7 @@ export class MediaService {
     }
 
     // Supprimer le fichier physique (si nécessaire)
-    const filePath = join(process.cwd(), 'uploads', media.url); // Chemin du fichier
+    const filePath = join(process.cwd(), media.url); // Chemin du fichier, en utilisant media.url
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath); // Supprimer le fichier sur le système de fichiers
     }
