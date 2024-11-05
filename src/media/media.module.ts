@@ -12,7 +12,6 @@ import { extname, join } from 'path';
     MulterModule.register({
       storage: diskStorage({
         destination: join(process.cwd(), 'uploads'), // Utiliser process.cwd() pour pointer vers la racine du projet
-        // destination: join(__dirname, '..', '..', 'uploads'), // Chemin correct pour le stockage
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
