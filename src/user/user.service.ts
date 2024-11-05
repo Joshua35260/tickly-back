@@ -240,11 +240,16 @@ export class UserService {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
-      if (updateUserDto.password) {
+      if (
+        updateUserDto.password &&
+        updateUserDto.password !== existingUser.password
+      ) {
         updateUserDto.password = await bcrypt.hash(
           updateUserDto.password,
           roundsOfHashing,
         );
+      } else {
+        delete updateUserDto.password; // Supprimer le mot de passe pour ne pas le mettre à jour
       }
 
       const { roles, address, avatarId, archivedAt, ...userData } =
