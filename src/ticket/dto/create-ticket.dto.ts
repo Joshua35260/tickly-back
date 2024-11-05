@@ -8,46 +8,11 @@ import {
   IsOptional,
 } from 'class-validator';
 
-export class CategoryDto {
-  @IsNumber()
-  @IsNotEmpty()
-  id: number;
-
-  @IsString()
-  @IsNotEmpty()
-  category: string;
-}
-
-export class StatusDto {
-  @IsNumber()
-  @IsNotEmpty()
-  id: number;
-
-  @IsString()
-  @IsNotEmpty()
-  status: string;
-}
-
-export class PriorityDto {
-  @IsNumber()
-  @IsNotEmpty()
-  id: number;
-
-  @IsString()
-  @IsNotEmpty()
-  priority: string;
-}
-
 export class CreateTicketDto {
   @IsNumber()
   @IsOptional()
   @ApiProperty({ required: false, nullable: false })
   id?: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  @ApiProperty({ required: true, nullable: false }) // Exemple d'objet statut
-  authorId: number;
 
   @MaxLength(50)
   @ApiProperty({
@@ -64,7 +29,7 @@ export class CreateTicketDto {
   @ApiProperty({ required: false })
   archivedAt?: Date;
 
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(50)
   @ApiProperty({
     nullable: false,
@@ -83,4 +48,9 @@ export class CreateTicketDto {
     nullable: false,
   })
   category: string[];
+
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ required: false, nullable: true })
+  structureId?: number;
 }

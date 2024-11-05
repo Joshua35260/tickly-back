@@ -8,6 +8,8 @@ import {
   IsOptional,
   IsEmail,
 } from 'class-validator';
+import { MediaEntity } from 'src/shared/media.entity';
+import { TicketEntity } from 'src/ticket/entities/ticket.entity';
 export class StructureEntity implements Structure {
   @IsNumber()
   @ApiProperty()
@@ -44,4 +46,23 @@ export class StructureEntity implements Structure {
 
   @ApiProperty({ required: true, nullable: false })
   address: Address;
+
+  @ApiProperty({ required: false, nullable: false })
+  avatarId: number;
+
+  @ApiProperty({ required: false, type: () => MediaEntity, nullable: true })
+  avatar?: MediaEntity;
+
+  @ApiProperty({ required: false, nullable: true })
+  avatarUrl: string;
+
+  @ApiProperty({ required: false })
+  archivedAt: Date;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  ticketId: number;
+
+  @ApiProperty({ required: false, type: () => TicketEntity })
+  tickets: TicketEntity[];
 }

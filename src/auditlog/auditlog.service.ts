@@ -92,6 +92,17 @@ export class AuditLogService {
     // Si le nombre de logs dépasse 50, supprimer les plus anciens
     if (auditLogs.length >= 50) {
       const logsToDelete = auditLogs.slice(0, auditLogs.length - 49); // Conserver les 49 plus récents
+
+      // Supprimer les logs de valeur associés
+      await this.prisma.auditLogValue.deleteMany({
+        where: {
+          auditLogId: {
+            in: logsToDelete.map((log) => log.id),
+          },
+        },
+      });
+
+      // Ensuite, supprimer les logs eux-mêmes
       await this.prisma.auditLog.deleteMany({
         where: {
           id: {

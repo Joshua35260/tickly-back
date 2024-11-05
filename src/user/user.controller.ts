@@ -20,6 +20,7 @@ import {
   ApiOkResponse,
   ApiBearerAuth,
   ApiExtraModels,
+  ApiCookieAuth,
 } from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
@@ -43,18 +44,21 @@ export class UserController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity, isArray: true })
   @ApiExtraModels(PaginationDto, FilterUserDto)
   findAll(
     @Query() pagination: PaginationDto,
     @Query() filters?: FilterUserDto,
+    @Query('sort') sort?: string,
   ) {
-    return this.userService.findAll(pagination, filters);
+    return this.userService.findAll(pagination, filters, sort);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity })
   @ApiExtraModels(PaginationDto, FilterUserDto)
@@ -64,6 +68,7 @@ export class UserController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity })
   update(
@@ -76,6 +81,7 @@ export class UserController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: UserEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
@@ -85,6 +91,7 @@ export class UserController {
   // *** Ajouter une structure à un utilisateur ***
   @Post(':userId/structures/:structureId')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiCreatedResponse({
     description: 'Structure added to user',
@@ -101,6 +108,7 @@ export class UserController {
   // *** Retirer une structure d'un utilisateur ***
   @Delete(':userId/structures/:structureId')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({
     description: 'Structure removed from user',

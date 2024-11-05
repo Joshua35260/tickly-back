@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -28,7 +29,11 @@ export class StructureService {
     if (!user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
+    if (!createStructureDto.address) {
+      throw new BadRequestException(
+        "L'adresse est obligatoire pour créer une structure.",
+      );
+    }
     // Transaction pour créer la structure et l'audit
     return await this.prisma.$transaction(async (prisma) => {
       const newStructure = await prisma.structure.create({
@@ -74,6 +79,7 @@ export class StructureService {
   async findAll(
     pagination: PaginationDto,
     filters?: FilterStructureDto,
+    sort?: string,
   ): Promise<{
     page: number;
     pageSize: number;
@@ -82,7 +88,7 @@ export class StructureService {
   }> {
     const { page, pageSize } = pagination;
 
-    // Construire directement le "where" Prisma à partir des filtres venant des query params
+    // Construire l'objet `where` pour les filtres
     const where: Prisma.StructureWhereInput = {
       id: filters?.id ? Number(filters.id) : undefined,
       name: filters?.name
@@ -97,7 +103,6 @@ export class StructureService {
       email: filters?.email
         ? { contains: filters.email, mode: 'insensitive' }
         : undefined,
-
       phone: filters?.phone
         ? { contains: filters.phone, mode: 'insensitive' }
         : undefined,
@@ -105,17 +110,47 @@ export class StructureService {
         ? {
             some: {
               OR: [
-                { firstname: { contains: filters.users, mode: 'insensitive' } }, // Recherche sur firstname
-                { lastname: { contains: filters.users, mode: 'insensitive' } }, // Recherche sur lastname
+                { firstname: { contains: filters.users, mode: 'insensitive' } },
+                { lastname: { contains: filters.users, mode: 'insensitive' } },
               ],
             },
           }
         : undefined,
-
-      address: filters?.address
-        ? { streetL1: { contains: filters.address, mode: 'insensitive' } }
-        : undefined,
     };
+    if (filters?.hideArchive === 'true') {
+      where.archivedAt = { equals: null }; // Exclure les tickets archivés
+    }
+    // Ajouter un filtre de recherche `search` pour vérifier sur plusieurs champs
+    if (filters?.search) {
+      const searchTerms = filters.search
+        .split(' ')
+        .filter((term) => term.trim() !== '');
+
+      // Initialiser le tableau OR pour les recherches
+      where.OR = [];
+
+      // Ajout des conditions de recherche pour chaque terme
+      searchTerms.forEach((term) => {
+        where.OR.push({
+          name: { contains: term, mode: 'insensitive' },
+        });
+        where.OR.push({
+          address: {
+            OR: [
+              { streetL1: { contains: term, mode: 'insensitive' } },
+              { city: { contains: term, mode: 'insensitive' } },
+              { country: { contains: term, mode: 'insensitive' } },
+            ],
+          },
+        });
+        where.OR.push({
+          email: { contains: term, mode: 'insensitive' },
+        });
+        where.OR.push({
+          phone: { contains: term, mode: 'insensitive' },
+        });
+      });
+    }
 
     // Récupération des structures avec pagination et filtres
     const [structures, totalCount] = await this.prisma.$transaction([
@@ -123,10 +158,16 @@ export class StructureService {
         where,
         skip: (page - 1) * pageSize,
         take: pageSize,
+        orderBy: sort ? this.getSortCriteria(sort) : undefined,
         include: {
           address: true,
           users: {
-            omit: { password: true },
+            select: {
+              id: true,
+              firstname: true,
+              lastname: true,
+              login: true,
+            },
           },
         },
       }),
@@ -141,6 +182,16 @@ export class StructureService {
     };
   }
 
+  private getSortCriteria(sort: string) {
+    const sortParams = sort.split(' '); // 'name asc' devient ['name', 'asc']
+    if (sortParams.length !== 2) {
+      throw new Error('Invalid sort parameter');
+    }
+    return {
+      [sortParams[0]]: sortParams[1].toLowerCase() === 'asc' ? 'asc' : 'desc',
+    };
+  }
+
   async findOne(id: number): Promise<Structure | null> {
     return await this.prisma.structure.findUnique({
       where: { id },
@@ -149,6 +200,7 @@ export class StructureService {
         users: {
           omit: { password: true },
         },
+        tickets: true,
       },
     });
   }
@@ -173,6 +225,7 @@ export class StructureService {
           users: {
             omit: { password: true },
           },
+          tickets: true,
         },
       });
 
@@ -261,18 +314,22 @@ export class StructureService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    // Récupérer les détails de l'utilisateur à ajouter
+    const userToAdd = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     return await this.prisma.$transaction(async (prisma) => {
-      // Mise à jour de la structure en ajoutant l'utilisateur
       const updatedStructure = await prisma.structure.update({
         where: { id: structureId },
         data: {
           users: {
-            connect: { id: userId }, // Connecter l'utilisateur à la structure
+            connect: { id: userId },
           },
         },
         include: {
           users: true,
+          tickets: true,
         },
       });
 
@@ -282,10 +339,18 @@ export class StructureService {
         structureId,
         LinkedTable.STRUCTURE,
         'ADD_USER',
-        [{ field: 'users', previousValue: '', newValue: userId.toString() }],
+        [
+          {
+            field: 'users',
+            previousValue: '',
+            newValue: userToAdd
+              ? userToAdd.firstname + ' ' + userToAdd.lastname
+              : 'Utilisateur inconnu', // Inclure le nom de l'utilisateur
+          },
+        ],
       );
 
-      return updatedStructure; // Retourner la structure mise à jour
+      return updatedStructure;
     });
   }
 
@@ -301,18 +366,22 @@ export class StructureService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    // Récupérer les détails de l'utilisateur à retirer
+    const userToRemove = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     return await this.prisma.$transaction(async (prisma) => {
-      // Mise à jour de la structure en retirant l'utilisateur
       const updatedStructure = await prisma.structure.update({
         where: { id: structureId },
         data: {
           users: {
-            disconnect: { id: userId }, // Déconnecter l'utilisateur de la structure
+            disconnect: { id: userId },
           },
         },
         include: {
           users: true,
+          tickets: true,
         },
       });
 
@@ -322,10 +391,37 @@ export class StructureService {
         structureId,
         LinkedTable.STRUCTURE,
         'REMOVE_USER',
-        [{ field: 'users', previousValue: userId.toString(), newValue: '' }],
+        [
+          {
+            field: 'users',
+            previousValue: userToRemove
+              ? userToRemove.firstname + ' ' + userToRemove.lastname
+              : 'Utilisateur inconnu',
+            newValue: '',
+          },
+        ],
       );
 
-      return updatedStructure; // Retourner la structure mise à jour
+      return updatedStructure;
+    });
+  }
+
+  async getStructuresByUser(userId: number): Promise<Structure[]> {
+    return await this.prisma.structure.findMany({
+      where: {
+        users: {
+          some: {
+            id: userId,
+          },
+        },
+      },
+      include: {
+        address: true,
+        users: {
+          omit: { password: true },
+        },
+        tickets: true,
+      },
     });
   }
 }

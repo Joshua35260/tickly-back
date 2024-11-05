@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Media } from '@prisma/client';
 import {
   IsArray,
   IsNotEmpty,
@@ -58,4 +59,7 @@ export class TicketEntity {
     nullable: false,
   })
   category: string[];
+
+  @IsArray()
+  medias: Media[];
 }

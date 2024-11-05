@@ -15,6 +15,7 @@ import { AuditLogService } from 'src/auditlog/auditlog.service';
 import { UserEntity } from './entities/user.entity';
 import { PrismaService } from 'prisma/prisma.service';
 import { LinkedTable } from 'src/shared/enum/linked-table.enum';
+import { plainToInstance } from 'class-transformer';
 
 export const roundsOfHashing = 10;
 
@@ -101,42 +102,79 @@ export class UserService {
   async findAll(
     pagination: PaginationDto,
     filters?: FilterUserDto,
+    sort?: string,
   ): Promise<{
     page: number;
     pageSize: number;
     total: number;
-    items: Omit<User, 'password'>[];
+    items: User[]; // Type User pour les résultats
   }> {
     const { page, pageSize } = pagination;
 
-    // Construire directement le "where" Prisma à partir des filtres venant des query params
-    const where: Prisma.UserWhereInput = {
-      id: filters?.id ? Number(filters.id) : undefined,
-      firstname: filters?.firstname
-        ? { contains: filters.firstname, mode: 'insensitive' } // Recherche partielle insensible à la casse
-        : undefined,
-      lastname: filters?.lastname
-        ? { contains: filters.lastname, mode: 'insensitive' }
-        : undefined,
-      phone: filters?.phone
-        ? { contains: filters.phone, mode: 'insensitive' } // Recherche partielle insensible à la casse
-        : undefined,
-      email: filters?.email
-        ? { contains: filters.email, mode: 'insensitive' } // Recherche partielle insensible à la casse
-        : undefined,
-      roles: filters?.roles
-        ? { some: { role: { equals: filters.roles, mode: 'insensitive' } } } // Vérifie si l'utilisateur a l'un des rôles spécifiés
-        : undefined,
+    // Construire le "where" Prisma à partir des filtres
+    const where: Prisma.UserWhereInput = {};
 
-      address: filters?.address
-        ? { streetL1: { contains: filters.address, mode: 'insensitive' } }
-        : undefined,
-      structures: filters?.structures
-        ? {
-            some: { name: { equals: filters.structures, mode: 'insensitive' } },
-          }
-        : undefined,
-    };
+    // Si un id est fourni, ajoutez-le au where
+    if (filters?.id !== undefined) {
+      where.id = Number(filters.id);
+    }
+
+    // Filtrer les tickets archivés si hideArchive est vrai
+    if (filters?.hideArchive === 'true') {
+      where.archivedAt = { equals: null }; // Exclure les tickets archivés
+    }
+    // Si une recherche est fournie, ajoutez-la au where
+    if (filters?.search) {
+      const searchTerms = filters.search
+        .split(' ')
+        .filter((term) => term.trim() !== ''); // Séparer par espaces et filtrer les termes vides
+
+      // Conditions pour le prénom, le nom, le téléphone et l'email
+      const nameConditions = searchTerms.flatMap((term) => [
+        {
+          firstname: {
+            contains: term,
+            mode: 'insensitive' as Prisma.QueryMode,
+          },
+        },
+        {
+          lastname: { contains: term, mode: 'insensitive' as Prisma.QueryMode },
+        },
+        {
+          phone: { contains: term, mode: 'insensitive' as Prisma.QueryMode }, // Recherche par téléphone
+        },
+        {
+          email: { contains: term, mode: 'insensitive' as Prisma.QueryMode }, // Recherche par email
+        },
+        {
+          address: {
+            OR: [
+              {
+                streetL1: {
+                  contains: term,
+                  mode: 'insensitive' as Prisma.QueryMode,
+                },
+              }, // Recherche par rue
+              {
+                city: {
+                  contains: term,
+                  mode: 'insensitive' as Prisma.QueryMode,
+                },
+              }, // Recherche par ville
+              {
+                country: {
+                  contains: term,
+                  mode: 'insensitive' as Prisma.QueryMode,
+                },
+              }, // Recherche par pays
+            ],
+          },
+        },
+      ]);
+
+      // Ajoutez les conditions dans un OR
+      where.OR = nameConditions;
+    }
 
     // Récupération des utilisateurs avec pagination et filtres
     const [users, totalCount] = await this.prisma.$transaction([
@@ -144,12 +182,15 @@ export class UserService {
         where,
         skip: (page - 1) * pageSize,
         take: pageSize,
+        orderBy: sort ? this.getSortCriteria(sort) : undefined,
         include: {
-          roles: true,
-          address: true,
-          structures: true,
+          address: true, // Inclure l'adresse de l'utilisateur
+          structures: {
+            include: {
+              address: true, // Inclure l'adresse de la structure
+            },
+          },
         },
-        omit: { password: true },
       }),
       this.prisma.user.count({ where }),
     ]);
@@ -158,11 +199,21 @@ export class UserService {
       page,
       pageSize,
       total: totalCount,
-      items: users.map((user) => ({
-        ...user,
-      })),
+      items: users,
     };
   }
+
+  // Méthode pour transformer le critère de tri
+  private getSortCriteria(sort: string) {
+    const sortParams = sort.split(' '); // 'firstname asc' devient ['firstname', 'asc']
+    if (sortParams.length !== 2) {
+      throw new Error('Invalid sort parameter');
+    }
+    return {
+      [sortParams[0]]: sortParams[1].toLowerCase() === 'asc' ? 'asc' : 'desc',
+    };
+  }
+
   async update(
     id: number,
     updateUserDto: UpdateUserDto,
@@ -176,13 +227,14 @@ export class UserService {
 
     return await this.prisma.$transaction(async (prisma) => {
       // Définir le type de `existingUser`
-      const existingUser = (await prisma.user.findUnique({
+      const existingUser = await prisma.user.findUnique({
         where: { id },
-        include: {
-          roles: true,
-          address: true,
-        },
-      })) as UserEntity;
+        include: { address: true, roles: true, avatar: true, structures: true }, // Inclure l'adresse si nécessaire
+      });
+
+      if (!existingUser) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
 
       if (!existingUser) {
         throw new NotFoundException(`User with ID ${id} not found`);
@@ -195,10 +247,12 @@ export class UserService {
         );
       }
 
-      const { roles, address, ...userData } = updateUserDto;
+      const { roles, address, avatarId, archivedAt, ...userData } =
+        updateUserDto;
 
       const updateData: any = {
         ...userData,
+        archivedAt: archivedAt || null,
         roles:
           roles?.length > 0
             ? {
@@ -228,12 +282,18 @@ export class UserService {
           : undefined,
       };
 
+      if (avatarId) {
+        updateData.avatar = {
+          connect: { id: avatarId }, // Connect the new avatar
+        };
+      }
       const updatedUser = await prisma.user.update({
         where: { id },
         data: updateData,
         include: {
           roles: true,
           address: true,
+          avatar: true,
         },
         omit: { password: true },
       });
@@ -247,7 +307,7 @@ export class UserService {
           if (key in existingUser) {
             const oldValue = existingUser[key];
             const newValue = updateUserDto[key];
-            return oldValue !== newValue; // Comparer les anciennes et nouvelles valeurs
+            return oldValue !== newValue && key !== 'password'; // Comparer les anciennes et nouvelles valeurs
           }
           return false; // Ignore les clés non valides
         })
@@ -277,14 +337,13 @@ export class UserService {
         address: true,
         structures: true,
       },
-      omit: { password: true },
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return user;
+    return user; // Retourner l'instance UserEntity
   }
 
   async remove(id: number): Promise<Omit<User, 'password'> | null> {
@@ -310,9 +369,12 @@ export class UserService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    // Récupérer les détails de la structure à ajouter
+    const structureToAdd = await this.prisma.structure.findUnique({
+      where: { id: structureId },
+    });
+
     return await this.prisma.$transaction(async (prisma) => {
-      // Mise à jour de l'utilisateur en ajoutant la structure
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
@@ -335,7 +397,9 @@ export class UserService {
           {
             field: 'structures',
             previousValue: '',
-            newValue: structureId.toString(),
+            newValue: structureToAdd
+              ? structureToAdd.name
+              : 'Structure inconnue', // Inclure le nom de la structure
           },
         ],
       );
@@ -356,9 +420,12 @@ export class UserService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Utilisation d'une transaction pour s'assurer que les deux opérations réussissent ou échouent ensemble
+    // Récupérer les détails de la structure à retirer
+    const structureToRemove = await this.prisma.structure.findUnique({
+      where: { id: structureId },
+    });
+
     return await this.prisma.$transaction(async (prisma) => {
-      // Mise à jour de l'utilisateur en retirant la structure
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
@@ -380,7 +447,9 @@ export class UserService {
         [
           {
             field: 'structures',
-            previousValue: structureId.toString(),
+            previousValue: structureToRemove
+              ? structureToRemove.name
+              : 'Structure inconnue', // Inclure le nom de la structure
             newValue: '',
           },
         ],

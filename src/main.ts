@@ -12,7 +12,7 @@ async function bootstrap() {
     origin: (origin, callback) => {
       const allowedOrigins = isProduction
         ? ['https://tickly.cloud', 'http://localhost:4200']
-        : ['http://localhost:4200', 'http://localhost:3000'];
+        : ['http://localhost:4200', 'http://localhost:3000', '*'];
 
       // Vérifiez si l'origine est dans la liste des origines autorisées
       if (!origin || allowedOrigins.includes(origin)) {
@@ -23,7 +23,7 @@ async function bootstrap() {
     },
     credentials: true, // Autoriser les cookies
   });
-
+  app.useGlobalPipes(new ValidationPipe({ transform: true })); // transform true = transforme les types d'objets en types natifs
   app.setGlobalPrefix('api'); // Définir le préfixe global pour toutes les routes
   app.use(cookieParser()); // cookie parser middleware
   app.useGlobalPipes(new ValidationPipe({ whitelist: true })); //whitelist true = supprime les champs non renseignés

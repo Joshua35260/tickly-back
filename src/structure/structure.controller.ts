@@ -16,6 +16,7 @@ import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import {
   ApiBearerAuth,
+  ApiCookieAuth,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
@@ -34,6 +35,7 @@ export class StructureController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiCreatedResponse({ type: StructureEntity })
   create(
@@ -45,18 +47,21 @@ export class StructureController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: StructureEntity, isArray: true })
   @ApiExtraModels(PaginationDto, FilterStructureDto) // Indiquer à Swagger d'utiliser ce DTO
   findAll(
     @Query() pagination: PaginationDto,
     @Query() filters?: FilterStructureDto,
+    @Query('sort') sort?: string,
   ) {
-    return this.structureService.findAll(pagination, filters);
+    return this.structureService.findAll(pagination, filters, sort);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: StructureEntity })
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -65,6 +70,7 @@ export class StructureController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: StructureEntity })
   update(
@@ -77,6 +83,7 @@ export class StructureController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: StructureEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
@@ -86,6 +93,7 @@ export class StructureController {
   // *** Ajouter un utilisateur à une structure ***
   @Post(':structureId/users/:userId')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiCreatedResponse({
     description: 'User added to structure',
@@ -106,6 +114,7 @@ export class StructureController {
   // *** Retirer un utilisateur d'une structure ***
   @Delete(':structureId/users/:userId')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({
     description: 'User removed from structure',
@@ -121,5 +130,16 @@ export class StructureController {
       userId,
       request,
     );
+  }
+
+  //get by
+
+  @Get('user/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: StructureEntity, isArray: true })
+  getStructuresByUser(@Param('userId', ParseIntPipe) userId: number) {
+    return this.structureService.getStructuresByUser(userId);
   }
 }

@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Address } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -7,6 +9,7 @@ import {
   IsArray,
   IsNumber,
   IsEmail,
+  ValidateNested,
 } from 'class-validator';
 import { CreateAddressDto } from 'src/address/dto/create-address.dto';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
@@ -50,7 +53,8 @@ export class CreateStructureDto {
   })
   phone: string;
 
-  @ApiProperty({ required: true, nullable: false })
+  @ValidateNested() // Valider les objets imbriqués
+  @Type(() => CreateAddressDto) // Type pour transformer les objets JSON en CreateAddressDto
   address: CreateAddressDto;
 
   @IsArray()

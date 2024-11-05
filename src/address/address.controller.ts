@@ -19,8 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
-
-import { Address } from './entities/address.entity';
+import { AddressEntity } from './entities/address.entity';
 
 @Controller('address')
 @ApiTags('address')
@@ -30,7 +29,7 @@ export class AddressController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiCreatedResponse({ type: Address })
+  @ApiCreatedResponse({ type: AddressEntity })
   create(@Body() createAddressDto: CreateAddressDto) {
     return this.addressService.create(createAddressDto);
   }
@@ -38,7 +37,7 @@ export class AddressController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Address, isArray: true })
+  @ApiOkResponse({ type: AddressEntity, isArray: true })
   findAll() {
     return this.addressService.findAll();
   }
@@ -46,27 +45,27 @@ export class AddressController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Address })
+  @ApiOkResponse({ type: AddressEntity })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.addressService.findOne(+id);
+    return this.addressService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Address })
+  @ApiOkResponse({ type: AddressEntity })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateAddressDto: UpdateAddressDto,
   ) {
-    return this.addressService.update(+id, updateAddressDto);
+    return this.addressService.update(id, updateAddressDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOkResponse({ type: Address })
+  @ApiOkResponse({ type: AddressEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return this.addressService.remove(+id);
+    return this.addressService.remove(id);
   }
 }

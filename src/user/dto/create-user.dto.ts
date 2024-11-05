@@ -76,4 +76,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsNumber({}, { each: true })
   structures: number[];
+
+  @IsOptional()
+  avatarId?: number;
 }

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Media" ADD COLUMN     "url" VARCHAR(500) NOT NULL DEFAULT '';

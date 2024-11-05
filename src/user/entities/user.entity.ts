@@ -1,4 +1,4 @@
-import { Address, Role, User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleType } from 'src/shared/enum/role.enum';
 import {
@@ -11,6 +11,8 @@ import {
   IsEnum,
 } from 'class-validator';
 import { StructureEntity } from 'src/structure/entities/structure.entity';
+import { MediaEntity } from 'src/shared/media.entity';
+import { AddressEntity } from 'src/address/entities/address.entity';
 
 export class UserEntity implements User {
   @IsNumber()
@@ -58,9 +60,21 @@ export class UserEntity implements User {
   @ApiProperty({ required: false, nullable: false })
   addressId: number;
 
-  @ApiProperty({ required: false, nullable: false })
-  address: Address;
+  @ApiProperty({ required: false, type: () => AddressEntity, nullable: false })
+  address: AddressEntity;
 
-  @ApiProperty({ required: false, isArray: true })
-  structures: StructureEntity[];
+  @ApiProperty({ required: false, type: () => StructureEntity, isArray: true })
+  structures?: StructureEntity[];
+
+  @ApiProperty({ required: false, nullable: false })
+  avatarId: number;
+
+  @ApiProperty({ required: false, type: () => MediaEntity, nullable: true })
+  avatar?: MediaEntity;
+
+  @ApiProperty({ required: false, nullable: true })
+  avatarUrl: string;
+
+  @ApiProperty({ required: false })
+  archivedAt: Date;
 }

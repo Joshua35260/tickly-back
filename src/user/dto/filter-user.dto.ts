@@ -3,6 +3,14 @@ import { IsOptional, IsNumber, IsString } from 'class-validator';
 
 export class FilterUserDto {
   @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Search term for ticket title, status, priority, etc.',
+    type: String,
+  })
+  search?: string;
+
+  @IsOptional()
   @IsNumber()
   @ApiProperty({
     required: false,
@@ -72,4 +80,12 @@ export class FilterUserDto {
     type: String,
   })
   structures?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Hide archived users',
+    type: String,
+  })
+  hideArchive?: string;
 }

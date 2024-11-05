@@ -5,6 +5,14 @@ export class FilterTicketDto {
   @IsOptional()
   @ApiProperty({
     required: false,
+    description: 'Search term for ticket title, status, priority, etc.',
+    type: String,
+  })
+  search?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    required: false,
     description: 'Filter by ticket id',
     type: Number,
   })
@@ -49,4 +57,12 @@ export class FilterTicketDto {
     type: String,
   })
   author?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Hide archived tickets',
+    type: String,
+  })
+  hideArchive?: string;
 }
