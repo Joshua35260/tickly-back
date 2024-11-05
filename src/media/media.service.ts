@@ -7,15 +7,12 @@ import { CreateMediaDto } from './dto/create-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
 import { PrismaService } from 'prisma/prisma.service';
 import { Media } from '@prisma/client';
-import { ConfigService } from '@nestjs/config';
+
 import * as fs from 'fs';
 import { join } from 'path';
 @Injectable()
 export class MediaService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createMedia(createMediaDto: CreateMediaDto): Promise<Media> {
     const { filename, mimetype, userId, ticketId, structureId, commentId } =
