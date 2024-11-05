@@ -6,31 +6,6 @@ import { UserService } from '../../src/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 
-// token version
-// @Injectable()
-// export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-//   constructor(
-//     private usersService: UserService,
-//     private readonly configService: ConfigService,
-//   ) {
-//     super({
-//       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-//       ignoreExpiration: false,
-//       secretOrKey: configService.get<string>('JWT_SECRET'),
-//     });
-//   }
-
-//   async validate(payload: { userId: number }) {
-//     const user = await this.usersService.findOne(payload.userId);
-
-//     if (!user) {
-//       throw new UnauthorizedException();
-//     }
-
-//     return user;
-//   }
-
-//cookie version
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -11,6 +12,7 @@ import { PaginationDto } from 'src/shared/dto/pagination.dto';
 import { AuditLogService } from 'src/auditlog/auditlog.service';
 import { AuthenticatedRequest } from 'src/auth/auth.service';
 import { FilterStructureDto } from './dto/filter-structure.dto';
+import { LinkedTable } from 'src/shared/enum/linked-table.enum';
 
 @Injectable()
 export class StructureService {
@@ -27,7 +29,11 @@ export class StructureService {
     if (!user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
+    if (!createStructureDto.address) {
+      throw new BadRequestException(
+        "L'adresse est obligatoire pour créer une structure.",
+      );
+    }
     // Transaction pour créer la structure et l'audit
     return await this.prisma.$transaction(async (prisma) => {
       const newStructure = await prisma.structure.create({
@@ -35,12 +41,8 @@ export class StructureService {
           name: createStructureDto.name,
           type: createStructureDto.type,
           service: createStructureDto.service,
-          emails: {
-            create: createStructureDto.emails || [],
-          },
-          phones: {
-            create: createStructureDto.phones || [],
-          },
+          email: createStructureDto.email,
+          phone: createStructureDto.phone,
           address: {
             create: {
               country: createStructureDto.address.country,
@@ -54,8 +56,6 @@ export class StructureService {
           },
         },
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },
@@ -67,7 +67,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id, // Utilisateur actuel
         newStructure.id, // ID de la structure créée
-        'Structure', // Table liée
+        LinkedTable.STRUCTURE,
         'CREATE', // Action de création
         [], // Aucun champ modifié pour une création
       );
@@ -79,6 +79,7 @@ export class StructureService {
   async findAll(
     pagination: PaginationDto,
     filters?: FilterStructureDto,
+    sort?: string,
   ): Promise<{
     page: number;
     pageSize: number;
@@ -87,7 +88,7 @@ export class StructureService {
   }> {
     const { page, pageSize } = pagination;
 
-    // Construire directement le "where" Prisma à partir des filtres venant des query params
+    // Construire l'objet `where` pour les filtres
     const where: Prisma.StructureWhereInput = {
       id: filters?.id ? Number(filters.id) : undefined,
       name: filters?.name
@@ -99,35 +100,57 @@ export class StructureService {
       service: filters?.service
         ? { equals: filters.service, mode: 'insensitive' }
         : undefined,
-      emails: filters?.emails
-        ? {
-            some: {
-              email: { equals: filters.emails }, // Compare directement la chaîne
-            },
-          }
+      email: filters?.email
+        ? { contains: filters.email, mode: 'insensitive' }
         : undefined,
-      phones: filters?.phones
-        ? {
-            some: {
-              phone: { equals: filters.phones }, // Compare directement la chaîne
-            },
-          }
+      phone: filters?.phone
+        ? { contains: filters.phone, mode: 'insensitive' }
         : undefined,
       users: filters?.users
         ? {
             some: {
               OR: [
-                { firstname: { contains: filters.users, mode: 'insensitive' } }, // Recherche sur firstname
-                { lastname: { contains: filters.users, mode: 'insensitive' } }, // Recherche sur lastname
+                { firstname: { contains: filters.users, mode: 'insensitive' } },
+                { lastname: { contains: filters.users, mode: 'insensitive' } },
               ],
             },
           }
         : undefined,
-
-      address: filters?.address
-        ? { streetL1: { contains: filters.address, mode: 'insensitive' } }
-        : undefined,
     };
+    if (filters?.hideArchive === 'true') {
+      where.archivedAt = { equals: null }; // Exclure les tickets archivés
+    }
+    // Ajouter un filtre de recherche `search` pour vérifier sur plusieurs champs
+    if (filters?.search) {
+      const searchTerms = filters.search
+        .split(' ')
+        .filter((term) => term.trim() !== '');
+
+      // Initialiser le tableau OR pour les recherches
+      where.OR = [];
+
+      // Ajout des conditions de recherche pour chaque terme
+      searchTerms.forEach((term) => {
+        where.OR.push({
+          name: { contains: term, mode: 'insensitive' },
+        });
+        where.OR.push({
+          address: {
+            OR: [
+              { streetL1: { contains: term, mode: 'insensitive' } },
+              { city: { contains: term, mode: 'insensitive' } },
+              { country: { contains: term, mode: 'insensitive' } },
+            ],
+          },
+        });
+        where.OR.push({
+          email: { contains: term, mode: 'insensitive' },
+        });
+        where.OR.push({
+          phone: { contains: term, mode: 'insensitive' },
+        });
+      });
+    }
 
     // Récupération des structures avec pagination et filtres
     const [structures, totalCount] = await this.prisma.$transaction([
@@ -135,12 +158,16 @@ export class StructureService {
         where,
         skip: (page - 1) * pageSize,
         take: pageSize,
+        orderBy: sort ? this.getSortCriteria(sort) : undefined,
         include: {
           address: true,
-          emails: true,
-          phones: true,
           users: {
-            omit: { password: true },
+            select: {
+              id: true,
+              firstname: true,
+              lastname: true,
+              login: true,
+            },
           },
         },
       }),
@@ -155,16 +182,25 @@ export class StructureService {
     };
   }
 
+  private getSortCriteria(sort: string) {
+    const sortParams = sort.split(' '); // 'name asc' devient ['name', 'asc']
+    if (sortParams.length !== 2) {
+      throw new Error('Invalid sort parameter');
+    }
+    return {
+      [sortParams[0]]: sortParams[1].toLowerCase() === 'asc' ? 'asc' : 'desc',
+    };
+  }
+
   async findOne(id: number): Promise<Structure | null> {
     return await this.prisma.structure.findUnique({
       where: { id },
       include: {
-        emails: true,
-        phones: true,
         address: true,
         users: {
           omit: { password: true },
         },
+        tickets: true,
       },
     });
   }
@@ -185,12 +221,11 @@ export class StructureService {
       const existingStructure = await prisma.structure.findUnique({
         where: { id },
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },
           },
+          tickets: true,
         },
       });
 
@@ -201,52 +236,8 @@ export class StructureService {
       // Préparer les données pour la mise à jour
       const updateData: any = {
         ...updateStructureDto, // Inclure tous les champs de la DTO
-        phones: undefined, // Exclure temporairement pour traitement
-        emails: undefined, // Exclure temporairement pour traitement
         address: undefined, // Exclure temporairement pour traitement
       };
-
-      // Mettre à jour les téléphones s'ils sont fournis
-      if (updateStructureDto.phones?.length > 0) {
-        updateData.phones = {
-          update: updateStructureDto.phones
-            .filter((phone) => phone.id) // Ne mettre à jour que les téléphones avec un id
-            .map((phone) => ({
-              where: { id: phone.id },
-              data: {
-                phone: phone.phone,
-                type: phone.type,
-              },
-            })),
-          create: updateStructureDto.phones
-            .filter((phone) => !phone.id) // Créer de nouveaux téléphones sans id
-            .map((phone) => ({
-              phone: phone.phone,
-              type: phone.type,
-            })),
-        };
-      }
-
-      // Mettre à jour les e-mails s'ils sont fournis
-      if (updateStructureDto.emails?.length > 0) {
-        updateData.emails = {
-          update: updateStructureDto.emails
-            .filter((email) => email.id) // Ne mettre à jour que les e-mails avec un id
-            .map((email) => ({
-              where: { id: email.id },
-              data: {
-                email: email.email,
-                type: email.type,
-              },
-            })),
-          create: updateStructureDto.emails
-            .filter((email) => !email.id) // Créer de nouveaux e-mails sans id
-            .map((email) => ({
-              email: email.email,
-              type: email.type,
-            })),
-        };
-      }
 
       // Mettre à jour l'adresse si elle est fournie
       if (updateStructureDto.address) {
@@ -269,8 +260,6 @@ export class StructureService {
         where: { id },
         data: updateData,
         include: {
-          emails: true,
-          phones: true,
           address: true,
           users: {
             omit: { password: true },
@@ -297,7 +286,7 @@ export class StructureService {
       await this.auditLogService.createAuditLog(
         user.id,
         updatedStructure.id,
-        'Structure',
+        LinkedTable.STRUCTURE,
         'UPDATE',
         modifiedFields,
       );
@@ -309,6 +298,130 @@ export class StructureService {
   async remove(id: number): Promise<Structure> {
     return await this.prisma.structure.delete({
       where: { id },
+    });
+  }
+
+  // relation with users
+
+  async addUserToStructure(
+    structureId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Structure> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Récupérer les détails de l'utilisateur à ajouter
+    const userToAdd = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    return await this.prisma.$transaction(async (prisma) => {
+      const updatedStructure = await prisma.structure.update({
+        where: { id: structureId },
+        data: {
+          users: {
+            connect: { id: userId },
+          },
+        },
+        include: {
+          users: true,
+          tickets: true,
+        },
+      });
+
+      // Log d'audit pour l'ajout d'un utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id,
+        structureId,
+        LinkedTable.STRUCTURE,
+        'ADD_USER',
+        [
+          {
+            field: 'users',
+            previousValue: '',
+            newValue: userToAdd
+              ? userToAdd.firstname + ' ' + userToAdd.lastname
+              : 'Utilisateur inconnu', // Inclure le nom de l'utilisateur
+          },
+        ],
+      );
+
+      return updatedStructure;
+    });
+  }
+
+  // Suppression d'un utilisateur d'une structure avec transaction
+  async removeUserFromStructure(
+    structureId: number,
+    userId: number,
+    request: AuthenticatedRequest,
+  ): Promise<Structure> {
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    // Récupérer les détails de l'utilisateur à retirer
+    const userToRemove = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    return await this.prisma.$transaction(async (prisma) => {
+      const updatedStructure = await prisma.structure.update({
+        where: { id: structureId },
+        data: {
+          users: {
+            disconnect: { id: userId },
+          },
+        },
+        include: {
+          users: true,
+          tickets: true,
+        },
+      });
+
+      // Log d'audit pour la suppression d'un utilisateur
+      await this.auditLogService.createAuditLog(
+        user.id,
+        structureId,
+        LinkedTable.STRUCTURE,
+        'REMOVE_USER',
+        [
+          {
+            field: 'users',
+            previousValue: userToRemove
+              ? userToRemove.firstname + ' ' + userToRemove.lastname
+              : 'Utilisateur inconnu',
+            newValue: '',
+          },
+        ],
+      );
+
+      return updatedStructure;
+    });
+  }
+
+  async getStructuresByUser(userId: number): Promise<Structure[]> {
+    return await this.prisma.structure.findMany({
+      where: {
+        users: {
+          some: {
+            id: userId,
+          },
+        },
+      },
+      include: {
+        address: true,
+        users: {
+          omit: { password: true },
+        },
+        tickets: true,
+      },
     });
   }
 }

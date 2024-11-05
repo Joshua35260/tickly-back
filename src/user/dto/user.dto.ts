@@ -3,18 +3,13 @@ import {
   IsString,
   IsNotEmpty,
   MaxLength,
-  IsArray,
   IsOptional,
   IsEnum,
-  ValidateIf,
   IsNumber,
   IsEmail,
 } from 'class-validator';
 import { CreateAddressDto } from 'src/address/dto/create-address.dto';
 
-import { EmailDto } from 'src/shared/dto/email.dto';
-import { PhoneDto } from 'src/shared/dto/phone.dto';
-import { JobType } from 'src/shared/enum/job-type.enum';
 import { RoleType } from 'src/shared/enum/role.enum';
 
 export class UserDto {
@@ -35,29 +30,24 @@ export class UserDto {
   @ApiProperty({ nullable: false })
   lastname: string;
 
-  @IsArray()
-  @IsOptional()
+  @IsEmail()
+  @IsNotEmpty()
   @ApiProperty({
-    type: [PhoneDto],
+    required: true,
+    nullable: false,
+  })
+  email: string;
+
+  @IsString()
+  @ApiProperty({
     required: false,
     nullable: true,
   })
-  phones: PhoneDto[];
+  phone: string;
 
-  @ValidateIf((o) => o.jobType === JobType.FREELANCE)
-  @IsOptional({ message: 'Address is required for freelancers.' })
+  @IsOptional()
   @ApiProperty({ nullable: false, required: false }) // Pour être optionnel pour les non-freelancers
   address: CreateAddressDto;
-
-  @IsArray()
-  @IsEmail({}, { each: true })
-  @IsOptional()
-  @ApiProperty({
-    type: [EmailDto],
-    required: false,
-    nullable: true,
-  })
-  emails: EmailDto[];
 
   @IsEnum(RoleType, { each: true })
   @IsOptional()
@@ -68,22 +58,4 @@ export class UserDto {
     nullable: false,
   })
   roles?: RoleType[];
-
-  @IsEnum(JobType)
-  @IsNotEmpty()
-  @ApiProperty({ required: true, enum: JobType })
-  jobType: JobType;
-
-  @ValidateIf((o) => o.jobType !== JobType.FREELANCE)
-  @IsArray()
-  @IsNotEmpty({
-    message: 'At least one structure ID is required for non-freelancers.',
-  })
-  @IsNumber({}, { each: true })
-  @ApiProperty({
-    required: true,
-    type: [Number],
-    nullable: false,
-  })
-  structures: number[];
 }

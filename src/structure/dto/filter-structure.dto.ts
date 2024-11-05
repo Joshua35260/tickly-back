@@ -3,6 +3,14 @@ import { IsOptional, IsArray, IsNumber, IsString } from 'class-validator';
 
 export class FilterStructureDto {
   @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Search term for ticket title, status, priority, etc.',
+    type: String,
+  })
+  search?: string;
+
+  @IsOptional()
   @IsNumber()
   @ApiProperty({
     required: false,
@@ -45,7 +53,7 @@ export class FilterStructureDto {
     description: 'Filter by structure emails',
     type: String,
   })
-  emails?: string;
+  email?: string;
 
   @IsOptional()
   @IsString()
@@ -54,7 +62,7 @@ export class FilterStructureDto {
     description: 'Filter by structure phones',
     type: String,
   })
-  phones?: string;
+  phone?: string;
 
   @IsOptional()
   @IsArray()
@@ -73,4 +81,12 @@ export class FilterStructureDto {
     type: String,
   })
   address?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Hide archived structures',
+    type: String,
+  })
+  hideArchive?: string;
 }

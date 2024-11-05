@@ -43,9 +43,9 @@ describe('TicketController (e2e)', () => {
     it('should create a new ticket', async () => {
       const createTicketDto: CreateTicketDto = {
         description: 'New Ticket',
-        priority: { id: 1, priority: 'LOW' },
-        status: { id: 1, status: 'OPEN' },
-        category: [{ id: 1, category: 'BUG' }],
+        status: 'Closed',
+        category: ['Feature Request'],
+        priority: 'Low',
         authorId: 1,
       };
 
@@ -171,7 +171,6 @@ describe('TicketController (e2e)', () => {
           lastname: 'User',
           login: 'test.user@example.com',
           addressId: 1,
-          jobTypeId: 'FREELANCE',
           address: {
             id: 1,
             country: 'France',
@@ -181,10 +180,6 @@ describe('TicketController (e2e)', () => {
             streetL2: 'Suite 604',
             longitude: '7.7521',
             latitude: '48.5734',
-          },
-          jobType: {
-            id: 'FREELANCE',
-            jobType: 'Freelance',
           },
         },
       };
@@ -220,9 +215,9 @@ describe('TicketController (e2e)', () => {
   describe('/PATCH ticket/:id', () => {
     const updateTicketDto: UpdateTicketDto = {
       description: 'Updated Ticket',
-      status: { id: 3, status: 'Closed' },
-      category: [{ id: 2, category: 'Feature Request' }],
-      priority: { id: 1, priority: 'Low' },
+      status: 'Closed',
+      category: ['Feature Request'],
+      priority: 'Low',
       authorId: 613,
     };
     const mockTicketId = 1;

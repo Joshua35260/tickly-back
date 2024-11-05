@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Media } from '@prisma/client';
 import {
   IsArray,
   IsNotEmpty,
@@ -6,7 +7,6 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { StatusDto, PriorityDto, CategoryDto } from '../dto/create-ticket.dto';
 
 export class TicketEntity {
   @IsNumber()
@@ -18,6 +18,12 @@ export class TicketEntity {
   @MaxLength(100)
   @ApiProperty({ nullable: false })
   author: string;
+
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: true,
+  })
+  title: string;
 
   @IsString()
   @IsNotEmpty()
@@ -34,19 +40,26 @@ export class TicketEntity {
   @ApiProperty({ required: false })
   archivedAt: Date;
 
-  @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  @ApiProperty({ nullable: false })
-  status: StatusDto;
+  @ApiProperty({
+    nullable: false,
+  })
+  status: string;
 
-  @IsString()
   @IsNotEmpty()
-  @ApiProperty({ nullable: false })
-  priority: PriorityDto;
+  @MaxLength(50)
+  @ApiProperty({
+    nullable: false,
+  })
+  priority: string;
 
   @IsArray()
-  @IsNotEmpty()
-  @ApiProperty({ nullable: false })
-  category: CategoryDto[];
+  @ApiProperty({
+    nullable: false,
+  })
+  category: string[];
+
+  @IsArray()
+  medias: Media[];
 }

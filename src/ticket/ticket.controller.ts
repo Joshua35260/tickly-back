@@ -35,8 +35,9 @@ export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
   @Post()
-  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
   @ApiCreatedResponse({ type: TicketEntity })
   async create(
     @Body() createTicketDto: CreateTicketDto,
@@ -45,20 +46,40 @@ export class TicketController {
     return await this.ticketService.create(createTicketDto, request);
   }
 
+  @Get('stats') // define a dto later
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  async getStats() {
+    return this.ticketService.getStats();
+  }
+
+  @Get('open')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity, isArray: false })
+  async getTicketsByStatusOpen() {
+    return this.ticketService.getTicketsByStatusOpen();
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity, isArray: true })
-  @ApiExtraModels(PaginationDto, FilterTicketDto) // Indiquer à Swagger d'utiliser ce DTO
+  @ApiExtraModels(PaginationDto, FilterTicketDto)
   findAll(
     @Query() pagination: PaginationDto,
     @Query() filters?: FilterTicketDto,
+    @Query('sort') sort?: string,
   ) {
-    return this.ticketService.findAll(pagination, filters);
+    return this.ticketService.findAll(pagination, filters, sort);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity })
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -71,6 +92,7 @@ export class TicketController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity })
   update(
@@ -83,9 +105,66 @@ export class TicketController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
   @ApiBearerAuth()
   @ApiOkResponse({ type: TicketEntity })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ticketService.remove(id);
+  }
+
+  @Post(':ticketId/assign-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity })
+  async assignUser(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Body('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.ticketService.addUserToTicket(ticketId, userId, request);
+  }
+
+  @Post(':ticketId/remove-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity })
+  async unassignUser(
+    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Body('userId', ParseIntPipe) userId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.ticketService.removeUserFromTicket(ticketId, userId, request);
+  }
+
+  @Get('structure/:structureId')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity, isArray: true })
+  async getTicketsByStructureId(
+    @Param('structureId', ParseIntPipe) structureId: number,
+  ) {
+    const tickets = await this.ticketService.findByStructureId(structureId);
+    if (!tickets || tickets.length === 0) {
+      throw new NotFoundException(
+        `No tickets found for structure ID ${structureId}`,
+      );
+    }
+    return tickets;
+  }
+
+  @Get('user/:userId')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth()
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: TicketEntity, isArray: true })
+  async getTicketsByUserId(@Param('userId', ParseIntPipe) userId: number) {
+    const tickets = await this.ticketService.findByUserId(userId);
+    if (!tickets || tickets.length === 0) {
+      throw new NotFoundException(`No tickets found for user ID ${userId}`);
+    }
+    return tickets;
   }
 }

@@ -8,22 +8,12 @@ import {
   IsArray,
   IsOptional,
   IsEnum,
-  ValidateIf,
   IsNumber,
 } from 'class-validator';
 import { CreateAddressDto } from 'src/address/dto/create-address.dto';
-
-import { EmailDto } from 'src/shared/dto/email.dto';
-import { PhoneDto } from 'src/shared/dto/phone.dto';
-import { JobType } from 'src/shared/enum/job-type.enum';
 import { RoleType } from 'src/shared/enum/role.enum';
 
 export class CreateUserDto {
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ required: false, nullable: false })
-  id?: number;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
@@ -49,29 +39,24 @@ export class CreateUserDto {
   @ApiProperty({ nullable: false })
   password: string;
 
-  @IsArray()
-  @IsOptional()
-  @ApiProperty({
-    type: [PhoneDto],
-    required: false,
-    nullable: true,
-  })
-  phones: PhoneDto[];
-
-  @ValidateIf((o) => o.jobType !== JobType.EMPLOYEE)
-  @IsOptional({ message: 'Address is required for non employee.' })
+  @IsNotEmpty({ message: 'Address is required' })
   @ApiProperty({ nullable: false, required: false }) // Pour être optionnel pour les employee
   address: CreateAddressDto;
 
-  @IsArray()
-  @IsOptional()
-  @IsEmail({}, { each: true })
+  @IsEmail()
+  @IsNotEmpty()
   @ApiProperty({
-    type: [EmailDto],
+    required: true,
+    nullable: false,
+  })
+  email: string;
+
+  @IsString()
+  @ApiProperty({
     required: false,
     nullable: true,
   })
-  emails: EmailDto[];
+  phone: string;
 
   @IsEnum(RoleType, { each: true })
   @IsOptional()
@@ -83,21 +68,15 @@ export class CreateUserDto {
   })
   roles?: RoleType[];
 
-  @IsEnum(JobType)
-  @IsNotEmpty()
-  @ApiProperty({ required: true, enum: JobType })
-  jobType: JobType;
-
-  @ValidateIf((o) => o.jobType !== JobType.FREELANCE)
-  @IsArray()
-  @IsNotEmpty({
-    message: 'At least one structure ID is required for non-freelancers.',
-  })
-  @IsNumber({}, { each: true })
   @ApiProperty({
-    required: true,
+    required: false,
     type: [Number],
-    nullable: false,
   })
+  @IsArray()
+  @IsOptional()
+  @IsNumber({}, { each: true })
   structures: number[];
+
+  @IsOptional()
+  avatarId?: number;
 }
