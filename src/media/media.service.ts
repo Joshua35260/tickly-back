@@ -50,8 +50,10 @@ export class MediaService {
           typemime: mimetype,
         },
       });
+      const uploadsPath =
+        this.configService.get<string>('UPLOADS_PATH') || 'uploads';
 
-      const mediaUrl = `/uploads/${media.filename}`;
+      const mediaUrl = `/${uploadsPath}/${media.filename}`;
 
       // Mettre à jour le média avec l'URL
       await prisma.media.update({
